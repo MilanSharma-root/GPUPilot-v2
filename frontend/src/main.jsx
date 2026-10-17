@@ -296,6 +296,8 @@ function App() {
 
       }
       row.anomalyMetric = row.isAnomaly ? row[metric === 'power' ? 'power' : 'temperature'] : null
+      row.anomalyPower = row.isAnomaly ? row.power : null
+      row.anomalyTemperature = row.isAnomaly ? row.temperature : null
 
       row.before = appliedAt && ts >= appliedAt ? null : row[metric]
 
@@ -567,6 +569,7 @@ function App() {
                   <Tooltip formatter={(v)=>[v == null ? 'N/A' : `${fmt(v,1)} W`]}/>
                   <Line type="monotone" dataKey="beforePower" name="Before" stroke="#c94b4b" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
                   <Line type="monotone" dataKey="afterPower" name="After" stroke="#167bce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                  <Line type="monotone" dataKey="anomalyPower" name="Detected anomaly" stroke="#e03439" strokeWidth={0} dot={{ r: 5, fill: '#e03439', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 7 }} connectNulls={false} isAnimationActive={false}/>
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -582,6 +585,7 @@ function App() {
                   <Tooltip formatter={(v)=>[v == null ? 'N/A' : `${fmt(v,1)} °C`]}/>
                   <Line type="monotone" dataKey="beforeTemperature" name="Before" stroke="#c94b4b" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
                   <Line type="monotone" dataKey="afterTemperature" name="After" stroke="#167bce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                  <Line type="monotone" dataKey="anomalyTemperature" name="Detected anomaly" stroke="#e03439" strokeWidth={0} dot={{ r: 5, fill: '#e03439', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 7 }} connectNulls={false} isAnimationActive={false}/>
                 </LineChart>
               </ResponsiveContainer>
             </div>
