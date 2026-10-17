@@ -423,3 +423,39 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .reference-config-card .config-values>div>span{color:#304565}
 .reference-config-card .config-values>div>b{color:#132344;font-size:12px;text-align:right}
 .recommended-config .config-values>div>b{color:#078348}
+
+/* Readability pass: increase contrast and type sizes across the full dashboard. */
+:root{color:#102044}
+.page-header h1{font-size:25px;color:#0d1b3a}
+.page-header p{font-size:13px;color:#425a7e}
+.nav-item{font-size:13px;font-weight:600;color:#20375d}
+.nav-item svg{width:20px;height:20px}
+.header-status{font-size:12px;color:#263f66}
+.kpi-label,.kpi-body>span,.kpi small{font-size:12px!important;color:#3b5276!important}
+.kpi-body strong,.kpi-value{font-size:27px!important;color:#0b1b3b!important;font-weight:800}
+.reference-card-heading h2{font-size:15px;color:#0c1c3c}
+.reference-config-card .config-values>div{padding:12px 16px;min-height:43px;font-size:14px}
+.reference-config-card .config-values>div>span{font-size:14px;color:#263e64;font-weight:500}
+.reference-config-card .config-values>div>b{font-size:14px;color:#0d1d3d;font-weight:800}
+.recommended-config .config-values>div>b{color:#00884d}
+.reference-apply-state{font-size:12px;color:#435b7c;padding:10px 14px}
+.reference-impact-list .impact-stat span{font-size:12px;color:#3e5679}
+.reference-impact-list .impact-stat strong{font-size:19px;font-weight:800}
+.reference-impact-list .impact-stat small{font-size:11px;color:#455d80}
+.reference-reasons li>span{font-size:14px;width:30px;height:30px}
+.reference-reasons strong{font-size:13px;color:#0e2042}
+.reference-reasons p{font-size:12px;color:#3f567a;line-height:1.5}
+.reference-sla-state strong{font-size:13px}
+.reference-sla-state small{font-size:11px;color:#3e5677}
+.dashboard-chart-header h2{font-size:15px!important;color:#0d1d3d}
+.dashboard-chart-header p{font-size:12px!important;color:#425a7d}
+.dashboard-chart-header .chart-state{font-size:10px;font-weight:700}
+.dashboard-chart-plot .recharts-text{font-size:11px!important;fill:#40577a}
+.dashboard-chart-plot .recharts-cartesian-axis-tick-value{font-size:11px!important}
+.sidebar .last-run,.sidebar .side-action,.sidebar .simulation-label{font-size:12px}
+@media(max-width:1250px){
+ .reference-config-card .config-values>div{padding:10px 12px}
+ .reference-config-card .config-values>div>span,.reference-config-card .config-values>div>b{font-size:13px}
+ .reference-reasons strong{font-size:12px}
+ .reference-reasons p{font-size:11px}
+}
