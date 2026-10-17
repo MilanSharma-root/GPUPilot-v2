@@ -603,7 +603,7 @@ def _dashboard_events(limit: int = 24):
         state = sample.workload_state.value
         if previous is not None and state != previous:
             label = {
-                "spike": ("anomaly_detected", "Telemetry Anomaly Detected", "Anomalous workload spike detected; monitoring correlated GPU power, utilization, and latency changes."),
+                "spike": ("traffic_spike", "Traffic Spike", "Workload demand started rising."),
                 "peak": ("peak", "Peak Load", "Workload reached the peak phase."),
                 "recovery": ("recovery", "Recovery", "Workload entered automatic recovery."),
                 "normal": ("normal", "Normal", "Workload returned to normal."),
