@@ -547,7 +547,7 @@ function App() {
           <div className="reference-why-card">
             <div className="reference-card-heading"><h2>Why This Optimization?</h2></div>
             <ol className="reference-reasons">{(opt?.reasons || ['Awaiting optimizer evaluation.']).slice(0,4).map((reason,i) => <li key={i}><span>{i+1}</span><div><strong>{['Lower resource intensity','Improved GPU utilization','Higher serving capacity','SLA-aware changes'][i] || 'Optimizer rationale'}</strong><p>{reason}</p></div></li>)}</ol>
-            <div className={`reference-sla-state ${slaPass ? 'pass' : 'watch'}"><ShieldCheck size={17}/><span><strong>{slaPass ? 'SLA safe' : 'SLA review required'}</strong><small>Latency and throughput guardrails</small></span></div>
+            <div className={`reference-sla-state ${slaPass ? 'pass' : 'watch'}`}><ShieldCheck size={17}/><span><strong>{slaPass ? 'SLA safe' : 'SLA review required'}</strong><small>Latency and throughput guardrails</small></span></div>
           </div>
         </section>
 
