@@ -529,7 +529,12 @@ def _anomaly_report(samples=None):
             # must also deviate materially from its normal baseline.
             hard_limit = ((not sample.latency_ok and latency_impact) or
                           (not sample.temperature_ok and sample.temperature >= baseline["temperature"] + 4))
-            if (demand_jump and (utilization_impact or power_impact or latency_impact)) or hard_limit:
+            state_value = getattr(sample.workload_state, "value", sample.workload_state)
+            # A deliberately triggered spike is itself an anomaly scenario when
+            # demand rises above baseline. Do not require power/latency to cross
+            # a second threshold on the same sample; those signals can lag demand.
+            intentional_spike = state_value in ("spike", "peak") and demand_jump
+            if (demand_jump and (utilization_impact or power_impact or latency_impact)) or hard_limit or intentional_spike:
                 anomalous_ids.append(sample.sample_id)
                 metrics = []
                 if demand_jump: metrics.append("request rate")
@@ -538,11 +543,15 @@ def _anomaly_report(samples=None):
                 if latency_impact: metrics.append("latency")
                 if not sample.temperature_ok: metrics.append("temperature SLA")
                 if not sample.latency_ok: metrics.append("latency SLA")
+                if intentional_spike and not any(m in metrics for m in ("GPU utilization", "GPU power", "latency")):
+                    metrics.append("workload spike")
                 event_details[sample.sample_id] = {
                     "sample_id": sample.sample_id,
                     "timestamp": sample.timestamp.isoformat(),
                     "metrics": metrics,
-                    "reason": ("Request burst caused correlated telemetry deviation: " + ", ".join(metrics)
+                    "reason": ("Intentional workload spike detected against the normal request-rate baseline: " + ", ".join(metrics)
+                               if intentional_spike else
+                               "Request burst caused correlated telemetry deviation: " + ", ".join(metrics)
                                if demand_jump else "Configured SLA/thermal limit was breached: " + ", ".join(metrics)),
                     "severity": "critical" if hard_limit or not sample.throughput_ok else "warning",
                 }
