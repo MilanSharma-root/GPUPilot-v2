@@ -292,6 +292,10 @@ function App() {
       row.before = appliedAt && ts >= appliedAt ? null : row[metric]
 
       row.after = appliedAt && ts >= appliedAt ? row[metric] : null
+      row.beforePower = appliedAt && ts >= appliedAt ? null : row.power
+      row.afterPower = appliedAt && ts >= appliedAt ? row.power : null
+      row.beforeTemperature = appliedAt && ts >= appliedAt ? null : row.temperature
+      row.afterTemperature = appliedAt && ts >= appliedAt ? row.temperature : null
 
       return row
 
@@ -472,6 +476,7 @@ function App() {
 
 
         {error && <div className="error-banner"><AlertTriangle size={17}/><span>Backend connection: {error}</span><button onClick={refresh}>Retry</button></div>}
+        {anomalyToast && <div className="anomaly-toast" role="alert" aria-live="assertive"><AlertTriangle size={16}/><span>{anomalyToast.text}</span><button onClick={() => setAnomalyToast(null)} aria-label="Dismiss alert">×</button></div>}
 
         <section className={`anomaly-panel ${data?.anomaly?.status === 'DETECTED' ? 'detected' : data?.anomaly?.status === 'RECOVERING' ? 'recovering' : 'normal'}`} id="sla-anomaly">
           <div className="anomaly-icon"><AlertTriangle size={21}/></div>
@@ -581,8 +586,6 @@ function App() {
 
             </div>
 
-            {anomalyToast && <div className="anomaly-toast" role="alert" aria-live="assertive"><AlertTriangle size={16}/><span>{anomalyToast.text}</span><button onClick={() => setAnomalyToast(null)} aria-label="Dismiss alert">×</button></div>}
-
             <div className={`autonomous-banner ${auto ? '' : 'inactive'}`} onClick={toggleAutopilot}>
 
               <ShieldCheck size={21}/><div><strong>{auto ? 'Autonomous Optimization Active' : 'Autonomous Optimization Inactive'}</strong><span>{auto ? 'Optimization automatically applied by AI Controller.' : 'Enable Autonomous Mode to apply feasible recommendations.'}</span></div>
@@ -594,6 +597,39 @@ function App() {
         </section>
 
 
+
+        <section className="dashboard-charts" aria-label="Before and after optimization telemetry">
+          <section className="panel dashboard-chart">
+            <div className="dashboard-chart-header"><div><h2>Power · Before vs After</h2><p>Live total GPU power (W)</p></div><span className="chart-state">{running ? 'LIVE TELEMETRY' : 'LAST RECORDED'}</span></div>
+            <div className="dashboard-chart-plot">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{top:5,right:8,left:-18,bottom:0}}>
+                  <CartesianGrid strokeDasharray="3 4"/>
+                  <XAxis dataKey="time" minTickGap={40}/>
+                  <YAxis domain={['auto','auto']}/>
+                  <Tooltip formatter={(v)=>[v == null ? 'N/A' : `${fmt(v,1)} W`]}/>
+                  <Line type="monotone" dataKey="beforePower" name="Before" stroke="#c94b4b" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                  <Line type="monotone" dataKey="afterPower" name="After" stroke="#167bce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+          <section className="panel dashboard-chart">
+            <div className="dashboard-chart-header"><div><h2>Temperature · Before vs After</h2><p>GPU thermal load (°C)</p></div><span className="chart-state">{slaPass ? 'SLA IN RANGE' : 'CHECK SLA'}</span></div>
+            <div className="dashboard-chart-plot">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{top:5,right:8,left:-18,bottom:0}}>
+                  <CartesianGrid strokeDasharray="3 4"/>
+                  <XAxis dataKey="time" minTickGap={40}/>
+                  <YAxis domain={['auto','auto']}/>
+                  <Tooltip formatter={(v)=>[v == null ? 'N/A' : `${fmt(v,1)} °C`]}/>
+                  <Line type="monotone" dataKey="beforeTemperature" name="Before" stroke="#c94b4b" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                  <Line type="monotone" dataKey="afterTemperature" name="After" stroke="#167bce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        </section>
 
         <section className="panel metrics-panel" id="live-monitoring">
 
