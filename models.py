@@ -112,6 +112,8 @@ class SpikeRequest(BaseModel):
     peak_hold_ticks: Optional[int] = Field(
         None, ge=1, description="Ticks to hold the peak before auto-recovery. "
         "null = hold until recovery is requested (best for live demos).")
+    trigger_type: Literal["manual", "anomaly"] = Field(
+        "manual", description="manual creates a workload alert; anomaly runs the anomaly-alert demo.")
 
 
 # ----------------------------------------------------------- configuration API
