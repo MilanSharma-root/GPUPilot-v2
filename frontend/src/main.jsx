@@ -156,9 +156,14 @@ function App() {
       ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       : detectedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     setAnomalyToast({ key: alertKey, text: `Anomaly detected at this time: ${timeText}` })
-    const timeout = setTimeout(() => setAnomalyToast(current => current?.key === alertKey ? null : current), 6000)
+  }, [data?.anomaly?.status, data?.anomaly?.last_detected_at, (data?.anomaly?.sample_ids || []).slice(-1)[0]])
+
+  useEffect(() => {
+    if (!anomalyToast?.key) return
+    const key = anomalyToast.key
+    const timeout = setTimeout(() => setAnomalyToast(current => current?.key === key ? null : current), 6000)
     return () => clearTimeout(timeout)
-  }, [data?.anomaly])
+  }, [anomalyToast?.key])
 
 
 
@@ -402,7 +407,7 @@ function App() {
 
           {nav.map(([key, label, Icon, id]) => (
 
-            <button key={key} className={`nav-item ${activeNav === key ? 'active' : ''}`} onClick={() => go(key)}>
+            <button key={key} title={label} aria-label={label} className={`nav-item ${activeNav === key ? 'active' : ''}`} onClick={() => go(key)}>
 
               <Icon size={19}/><span>{label}</span>
 
@@ -431,7 +436,8 @@ function App() {
 
           </button>
 
-          <button className="side-action primary" onClick={start} disabled={busy}><Play size={17} fill="currentColor"/>Start Simulation</button>
+          <button className="side-action primary" title="Start simulation" onClick={start} disabled={busy}><Play size={17} fill="currentColor"/>Start Simulation</button>
+          <button className="side-action stop" title="Stop simulation" onClick={stop} disabled={busy}><Square size={15}/>Stop Simulation</button>
 
           <button className="side-action warning side-spike-trigger" onClick={triggerAnomalySpike} disabled={busy}><Zap size={17} fill="currentColor"/>Trigger Anomaly Spike</button>
 
