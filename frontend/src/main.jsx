@@ -216,7 +216,7 @@ function App() {
     }
     const result = await api('/simulation/spike', {
       method: 'POST',
-      body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 12, peak_hold_ticks: 6, trigger_type: 'anomaly' }),
+      body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 6, peak_hold_ticks: 3, trigger_type: 'anomaly' }),
     })
     setSimulationNotice('')
   })
