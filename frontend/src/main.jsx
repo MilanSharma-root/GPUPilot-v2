@@ -216,7 +216,7 @@ function App() {
     }
     const result = await api('/simulation/spike', {
       method: 'POST',
-      body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 12, peak_hold_ticks: 6 }),
+      body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 12, peak_hold_ticks: 6, trigger_type: 'anomaly' }),
     })
     setSimulationNotice(result.message || 'Anomaly spike triggered. Watch telemetry for correlated changes.')
   })
@@ -227,7 +227,7 @@ function App() {
     }
     const result = await api('/simulation/spike', {
       method: 'POST',
-      body: JSON.stringify({ peak_rate: 1325, spike_duration_ticks: 8, peak_hold_ticks: 4 }),
+      body: JSON.stringify({ peak_rate: 1325, spike_duration_ticks: 8, peak_hold_ticks: 4, trigger_type: 'manual' }),
     })
     setSimulationNotice(result.message || 'Manual workload spike triggered.')
   })
