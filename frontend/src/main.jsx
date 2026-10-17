@@ -517,92 +517,39 @@ function App() {
           <small className="environment-disclaimer">This feature checks public release information only. It does not read or change a physical GPU driver, and update candidates require manual compatibility verification.</small>
         </section>
 
-        <section className="kpi-grid">
-
-          <Kpi icon={Power} label="Total GPU Power" value={fmt(telemetry?.total_power)} unit=" W" tone="power" history={chartData} dataKey="power"/>
-
-          <Kpi icon={Thermometer} label="Temperature" value={fmt(telemetry?.temperature)} unit=" °C" tone="temperature" history={chartData} dataKey="temperature"/>
-
-          <Kpi icon={Cpu} label="GPU Utilization" value={fmt(telemetry?.gpu_utilization)} unit=" %" tone="util" history={chartData} dataKey="utilization"/>
-
-          <Kpi icon={Server} label="GPU Fleet" value={fmt(data?.cluster?.gpu_count ?? 5)} unit=" GPUs" tone="request" simple/>
-
+        <section className="kpi-grid reference-kpis" aria-label="Infrastructure summary">
+          <Kpi icon={Cpu} label="Total GPUs" value={fmt(data?.cluster?.gpu_count)} unit=" GPUs" tone="util" simple/>
+          <Kpi icon={Power} label="Total GPU Power" value={fmt(telemetry?.total_power, 1)} unit=" W" tone="power" history={chartData} dataKey="power"/>
+          <Kpi icon={Thermometer} label="Average Temperature" value={fmt(telemetry?.temperature)} unit=" °C" tone="temperature" history={chartData} dataKey="temperature"/>
         </section>
 
 
 
-        <section className="optimization-card" id="ai-controller">
-
-          <div className="config-side">
-
-            <div className="section-title"><Cpu size={19}/><h2>Current <span>→</span> Optimized Configuration</h2></div>
-
-            <div className="config-compare">
-
-              <ConfigBox title="Current (Before)" config={current}/>
-
-              <div className="arrow">→</div>
-
-              <ConfigBox title={recommendationApplied ? "Optimized (Applied by AI)" : "AI Recommendation (Not Applied)"} config={recommended} optimized/>
-
-            </div>
-
-            <div className="config-evolution">
-              <div className="section-title"><History size={18}/><h3>Configuration Evolution</h3><span className="live-badge"><i/>Live</span></div>
-              <p className="config-evolution-note">Recent unique configurations selected from live workload conditions.</p>
-              <div className="config-evolution-grid">
-                {(data?.configuration_history || []).map((item, i) => (
-                  <div className="config-mini" key={`${item.timestamp}-${i}`}>
-                    <div className="config-mini-head"><b>#{i + 1}</b><span>{String(item.workload_state).toUpperCase()}</span></div>
-                    <strong>{item.configuration.precision} · B{item.configuration.batch_size}</strong>
-                    <div>GPU {item.configuration.gpu_allocation} · R{item.configuration.replicas} · C{item.configuration.concurrency}</div>
-                    <small>{fmt(item.request_rate)} req/min</small>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+        <section className="reference-optimization" id="ai-controller" aria-label="AI optimization recommendation">
+          <div className="reference-config-card current-config">
+            <div className="reference-card-heading"><h2>Current Configuration (Before)</h2></div>
+            <ConfigBox title="" config={current}/>
           </div>
-
-          <div className="why-side">
-
-            <div className="section-title"><Zap size={19}/><h2>Why this optimization?</h2></div>
-
-            <ul>{(opt?.reasons || ['Awaiting optimizer evaluation.']).map((r,i) => <li key={i}>{r}</li>)}</ul>
-
-            <div className="optimizer-status-line">
-              <span>Background optimizer</span><b>{data?.optimizer_status?.evaluation_running ? 'Evaluating' : (data?.optimizer_status?.worker_running ? 'Idle / scheduled' : 'Starting')}</b>
-              <small>Last evaluation: {data?.optimizer_status?.last_evaluation_at ? new Date(data.optimizer_status.last_evaluation_at).toLocaleTimeString() : 'waiting for first cycle'}</small>
-            </div>
-            <div className="performance-metrics">
-              <div><span>Primary SLA Latency</span><strong>{fmt(opt?.current_estimate?.latency, 1)} <small>ms current</small></strong><em>{fmt(opt?.recommended_estimate?.latency, 1)} ms optimized</em></div>
-              <div><span>Throughput</span><strong>{fmt(opt?.current_estimate?.throughput)} <small>req/min current</small></strong><em>{fmt(opt?.recommended_estimate?.throughput)} req/min optimized</em></div>
-            </div>
-            <div className="impact-heading">Expected Impact <span>(vs. Current)</span></div>
-
-            <div className="expected-grid">
-
-              <ImpactStat label="Power" value={impact?.power_reduction_pct} suffix="%" direction="down"/>
-
+          <div className="reference-config-card recommended-config">
+            <div className="reference-card-heading"><h2>AI Recommended Configuration</h2><span className="recommended-pill">Recommended</span></div>
+            <ConfigBox title="" config={recommended} optimized/>
+            <div className="reference-apply-state">{recommendationApplied ? 'Recommendation applied by AI controller' : 'Recommendation awaiting application'}</div>
+          </div>
+          <div className="reference-impact-card">
+            <div className="reference-card-heading"><h2>Expected Impact</h2></div>
+            <div className="reference-impact-list">
+              <ImpactStat label="GPU Power" value={impact?.power_reduction_pct} suffix="%" direction="down"/>
               <ImpactStat label="Temperature" value={impact?.temperature_reduction_c} suffix="°C" direction="down"/>
-
               <ImpactStat label="Throughput" value={impact?.throughput_change_req_min} suffix=" req/min" direction="up" neutral/>
-
-              <ImpactStat label="SLA" value={slaPass ? 'Maintained' : 'Failed'} sla/>
-
+              <ImpactStat label="SLA Status" value={slaPass ? 'Pass' : 'Check'} sla/>
             </div>
-
-            <div className={`autonomous-banner ${auto ? '' : 'inactive'}`} onClick={toggleAutopilot}>
-
-              <ShieldCheck size={21}/><div><strong>{auto ? 'Autonomous Optimization Active' : 'Autonomous Optimization Inactive'}</strong><span>{auto ? 'Optimization automatically applied by AI Controller.' : 'Enable Autonomous Mode to apply feasible recommendations.'}</span></div>
-
-            </div>
-
           </div>
-
+          <div className="reference-why-card">
+            <div className="reference-card-heading"><h2>Why This Optimization?</h2></div>
+            <ol className="reference-reasons">{(opt?.reasons || ['Awaiting optimizer evaluation.']).slice(0,4).map((reason,i) => <li key={i}><span>{i+1}</span><div><strong>{['Lower resource intensity','Improved GPU utilization','Higher serving capacity','SLA-aware changes'][i] || 'Optimizer rationale'}</strong><p>{reason}</p></div></li>)}</ol>
+            <div className={`reference-sla-state ${slaPass ? 'pass' : 'watch'}"><ShieldCheck size={17}/><span><strong>{slaPass ? 'SLA safe' : 'SLA review required'}</strong><small>Latency and throughput guardrails</small></span></div>
+          </div>
         </section>
-
-
 
         <section className="dashboard-charts" aria-label="Before and after optimization telemetry">
           <section className="panel dashboard-chart">
