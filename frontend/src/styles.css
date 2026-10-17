@@ -206,3 +206,165 @@ footer{text-align:center;color:#7c8797;font-size:9px;padding:6px 0 20px}
 .side-action.manual-spike-trigger{height:43px;background:#7c5ce7;color:#fff;border-color:#6d4bd5;font-size:12px;font-weight:750;cursor:pointer}
 .side-action.manual-spike-trigger:hover{background:#6948d1;border-color:#5d3cc3}
 .side-action.manual-spike-trigger:disabled{opacity:.65;cursor:wait}
+
+
+/* GPUPilot focused dashboard redesign — additive overrides keep existing components and API wiring intact. */
+:root{color-scheme:light;--navy:#101d35;--muted:#66758a;--line:#e0e6ed;--panel:#fff;--blue:#2563eb;--green:#07845f;--amber:#b7791f;--red:#c93434}
+body{min-width:320px;background:#f5f7fa;color:#152238}
+.app-shell{min-height:100vh}
+.sidebar{width:76px;padding:15px 10px;background:#101d35;border-right:1px solid #26364d;transition:width .18s ease;overflow:visible}
+.sidebar.collapsed{width:76px}
+.sidebar.expanded{width:252px;padding:15px 14px}
+.brand{height:52px;padding:0 7px 12px;border-color:#2b3a50;gap:9px}
+.brand-mark{width:36px;height:36px;flex:none;color:#48d4a3;transform:none}
+.brand-name{color:#f5f8fc;font-size:19px}
+.brand-sub{color:#9eacc0;font-size:10px;white-space:nowrap}
+.brand-copy{min-width:0;overflow:hidden}
+.sidebar.collapsed .brand-copy{display:none}
+.sidebar-toggle{margin-left:auto;flex:none;width:25px;height:25px;border:1px solid #33445c;border-radius:6px;background:#1b2b43;color:#dbe6f4;font-size:20px;line-height:1}
+.sidebar.collapsed .sidebar-toggle{position:absolute;right:-12px;top:25px;z-index:2;background:#1b2b43}
+.side-nav{padding:15px 0 10px;display:flex;flex-direction:column;gap:4px}
+.nav-item{height:42px;gap:13px;padding:0 12px;margin:0;border-radius:8px;color:#bac6d6;font-size:12px;white-space:nowrap;overflow:hidden}
+.nav-item svg{flex:none;color:#9babc0}
+.nav-item span{overflow:hidden;text-overflow:ellipsis}
+.nav-item:hover{background:#1d2c43;color:#fff}
+.nav-item.active{background:#1d3c4b;color:#eafff7;box-shadow:inset 3px 0 #42d6a2}
+.nav-item.active svg{color:#52e0ae}
+.sidebar.collapsed .nav-item{justify-content:center;padding:0}
+.sidebar.collapsed .nav-item span{display:none}
+.health-card{left:10px;right:10px;bottom:12px;padding:10px 8px;background:#172840;border:1px solid #2b405b;border-radius:10px;color:#edf5ff}
+.sidebar.expanded .health-card{left:14px;right:14px;padding:12px}
+.health-title{color:#e7f6f0;font-size:11px;gap:7px}
+.health-dot{width:8px;height:8px;box-shadow:none}
+.health-card p{font-size:10px;color:#a9b8ca;margin:7px 0 9px 15px}
+.autonomous-row{color:#d5e1ef;font-size:10px;padding:7px 2px;gap:5px}
+.autonomous-row b{color:#52d7a8}
+.side-action{height:30px;font-size:10px;margin-top:5px;border-radius:6px;gap:5px;padding:0 3px;white-space:nowrap}
+.side-action svg{width:14px;height:14px}
+.side-action.primary{background:#087b60;border-color:#087b60}
+.side-action.side-spike-trigger{height:30px;font-size:9px}
+.side-action.manual-spike-trigger{height:30px;font-size:9px}
+.side-action.reset{height:29px}
+.last-run{font-size:9px;color:#a9b8ca;margin:8px 2px 0}
+.last-run b{color:#f2f7fc}
+.sim-controls-label{font-size:8px;font-weight:800;letter-spacing:1px;color:#7f93ac;margin:0 0 6px;padding:0 2px}
+.sidebar.collapsed .brand{justify-content:center;padding-left:0;padding-right:0}
+.sidebar.collapsed .sidebar-toggle{font-size:0}
+.sidebar.collapsed .sidebar-toggle:after{content:'›';font-size:20px}
+.sidebar.collapsed .health-card{padding:8px 4px}
+.sidebar.collapsed .health-title{justify-content:center}
+.sidebar.collapsed .health-title strong,.sidebar.collapsed .health-card p,.sidebar.collapsed .autonomous-row span:not(.toggle),.sidebar.collapsed .sim-controls-label,.sidebar.collapsed .side-action:not(.primary):not(.reset),.sidebar.collapsed .last-run{display:none}
+.sidebar.collapsed .autonomous-row{justify-content:center}
+.sidebar.collapsed .toggle{margin:0}
+.sidebar.collapsed .side-action{font-size:0;width:100%;height:30px}
+.sidebar.collapsed .side-action.primary:after{content:'Start';font-size:9px}
+.sidebar.collapsed .side-action.reset:after{content:'Reset';font-size:9px}
+.main-content{margin-left:76px;width:calc(100% - 76px);max-width:none;padding:0 24px 24px;transition:margin-left .18s ease,width .18s ease}
+.main-content:not(.sidebar-collapsed){margin-left:252px;width:calc(100% - 252px)}
+.page-header{height:76px;border-bottom:1px solid #e4e9ef;margin-bottom:16px}
+.page-header h1{font-size:24px;letter-spacing:-.6px;font-weight:750}
+.page-header p{font-size:11px;color:#68768b;margin-top:4px}
+.header-status{font-size:10px;color:#536279;gap:9px}
+.system-status{font-size:10px}
+.system-status i{width:7px;height:7px}
+.kpi-grid{gap:10px;margin-bottom:12px}
+.kpi{height:104px;border-radius:10px;padding:15px 13px;box-shadow:0 1px 2px rgba(16,29,53,.025)}
+.kpi-icon{width:31px;height:31px}
+.kpi-icon svg{width:19px;height:19px}
+.kpi-body{margin-left:8px}
+.kpi-body>span{font-size:10px;color:#637188}
+.kpi-body strong{font-size:23px;letter-spacing:-.5px;margin-top:5px}
+.kpi-body strong small{font-size:10px}
+.kpi-delta{margin-top:7px;font-size:9px}
+.kpi-delta b{font-size:9px}
+.spark{width:70px;height:35px;margin-top:31px}
+.optimization-card{grid-template-columns:1.03fr .97fr;min-height:0;border-radius:10px;margin-bottom:12px;box-shadow:0 1px 2px rgba(16,29,53,.025)}
+.config-side,.why-side{padding:16px 18px}
+.section-title{gap:8px;margin-bottom:11px}
+.section-title h2{font-size:14px}
+.section-title svg{width:16px;height:16px}
+.config-box{min-height:0;border-radius:8px}
+.config-title{font-size:10px;padding:9px 10px}
+.config-values{padding:6px 10px}
+.config-values>div{padding:5px 0;font-size:10px}
+.applied-tag{font-size:8px}
+.arrow{font-size:23px}
+.config-evolution{margin-top:13px;padding-top:12px}
+.config-evolution .section-title h3{font-size:12px}
+.config-evolution-note{font-size:10px;margin:4px 0 8px}
+.config-evolution-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.config-mini{border-radius:7px;padding:7px}
+.config-mini-head{font-size:8px;margin-bottom:5px}
+.config-mini strong{font-size:9px}
+.config-mini div:not(.config-mini-head){font-size:8px}
+.config-mini small{font-size:8px;margin-top:5px}
+.why-side ul{font-size:10px;line-height:1.55;margin:4px 0 9px;padding-left:16px}
+.optimizer-status-line{font-size:9px;padding:8px 0}
+.optimizer-status-line small{font-size:8px}
+.performance-metrics{gap:7px;margin:9px 0}
+.performance-metrics>div{padding:8px 9px;border-radius:7px}
+.performance-metrics span{font-size:9px}
+.performance-metrics strong{font-size:14px;margin-top:4px}
+.performance-metrics small,.performance-metrics em{font-size:8px}
+.impact-heading{padding-top:8px;font-size:11px}
+.impact-heading span{font-size:9px}
+.expected-grid{margin-top:8px}
+.impact-stat{padding:0 7px}
+.impact-stat span{font-size:9px}
+.impact-stat strong{font-size:11px;margin-top:4px}
+.autonomous-banner{margin-top:9px;padding:8px 9px;border-radius:7px}
+.autonomous-banner svg{width:17px;height:17px}
+.autonomous-banner strong{font-size:10px}
+.autonomous-banner span{font-size:9px}
+.panel{border-radius:10px;box-shadow:0 1px 2px rgba(16,29,53,.025)}
+.metrics-panel,.quality-panel,.environment-monitor,.sustainability,.fleet-panel,.workload-panel,.decision-panel,.settings-panel{padding:14px 16px;margin-bottom:12px}
+.panel-header h2{font-size:14px}
+.panel-header p{font-size:10px}
+.main-chart{height:210px}
+.dashboard-charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}
+.dashboard-chart{padding:13px 14px;min-width:0}
+.dashboard-chart-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+.dashboard-chart-header h2{font-size:12px;margin:0;color:#17243d}
+.dashboard-chart-header p{font-size:9px;color:#6d7b90;margin:4px 0 0}
+.chart-state{font-size:8px;color:#68778b;background:#f1f4f7;border-radius:5px;padding:4px 6px;white-space:nowrap}
+.dashboard-chart-plot{height:145px}
+.dashboard-chart-plot .recharts-text{font-size:8px}
+.anomaly-toast{position:fixed;z-index:60;top:18px;right:22px;width:min(390px,calc(100vw - 36px));margin:0;padding:12px 13px;border-radius:9px;box-shadow:0 12px 32px rgba(25,35,50,.16);font-size:11px}
+.anomaly-toast button{margin-left:auto;flex:none;border:0;background:transparent;color:inherit;font-size:20px;line-height:1;padding:0 2px}
+.error-banner{border-radius:8px;font-size:11px}
+.anomaly-panel,.environment-monitor,.metrics-panel,.quality-panel,.sustainability,.bottom-grid,.decision-panel,.control-panel,.settings-panel{display:none}
+.main-content.dashboard .kpi-grid,.main-content.dashboard .optimization-card,.main-content.dashboard .dashboard-charts{display:grid}
+.main-content.dashboard .optimization-card{display:grid}
+.main-content.optimization .optimization-card,.main-content.optimization .quality-panel,.main-content.optimization .metrics-panel{display:block}
+.main-content.alerts .anomaly-panel,.main-content.alerts .decision-panel{display:block}
+.main-content.hardware .environment-monitor{display:block}
+.main-content.settings .settings-panel{display:block}
+.main-content.sustainability .sustainability{display:block}
+.main-content.fleet #gpu-fleet{display:block}
+.main-content.workloads #workloads{display:block}
+.main-content.analytics .metrics-panel,.main-content.analytics .decision-panel{display:block}
+.main-content.dashboard .dashboard-charts{display:grid}
+.main-content.dashboard .metrics-panel,.main-content.dashboard .quality-panel,.main-content.dashboard .environment-monitor,.main-content.dashboard .anomaly-panel,.main-content.dashboard .sustainability,.main-content.dashboard .bottom-grid,.main-content.dashboard .decision-panel,.main-content.dashboard .control-panel,.main-content.dashboard .settings-panel{display:none}
+.main-content.optimization .kpi-grid,.main-content.optimization .dashboard-charts,.main-content.optimization .environment-monitor,.main-content.optimization .anomaly-panel,.main-content.optimization .sustainability,.main-content.optimization .bottom-grid,.main-content.optimization .decision-panel,.main-content.optimization .control-panel,.main-content.optimization .settings-panel{display:none}
+.main-content.alerts .kpi-grid,.main-content.alerts .optimization-card,.main-content.alerts .dashboard-charts,.main-content.alerts .environment-monitor,.main-content.alerts .metrics-panel,.main-content.alerts .quality-panel,.main-content.alerts .sustainability,.main-content.alerts .bottom-grid,.main-content.alerts .control-panel,.main-content.alerts .settings-panel{display:none}
+.main-content.hardware .kpi-grid,.main-content.hardware .optimization-card,.main-content.hardware .dashboard-charts,.main-content.hardware .anomaly-panel,.main-content.hardware .metrics-panel,.main-content.hardware .quality-panel,.main-content.hardware .sustainability,.main-content.hardware .bottom-grid,.main-content.hardware .decision-panel,.main-content.hardware .control-panel,.main-content.hardware .settings-panel{display:none}
+.main-content.settings .kpi-grid,.main-content.settings .optimization-card,.main-content.settings .dashboard-charts,.main-content.settings .anomaly-panel,.main-content.settings .environment-monitor,.main-content.settings .metrics-panel,.main-content.settings .quality-panel,.main-content.settings .sustainability,.main-content.settings .bottom-grid,.main-content.settings .decision-panel,.main-content.settings .control-panel{display:none}
+.main-content.sustainability .kpi-grid,.main-content.sustainability .optimization-card,.main-content.sustainability .dashboard-charts,.main-content.sustainability .anomaly-panel,.main-content.sustainability .environment-monitor,.main-content.sustainability .metrics-panel,.main-content.sustainability .quality-panel,.main-content.sustainability .bottom-grid,.main-content.sustainability .decision-panel,.main-content.sustainability .control-panel,.main-content.sustainability .settings-panel{display:none}
+.main-content.fleet .kpi-grid,.main-content.fleet .optimization-card,.main-content.fleet .dashboard-charts,.main-content.fleet .anomaly-panel,.main-content.fleet .environment-monitor,.main-content.fleet .metrics-panel,.main-content.fleet .quality-panel,.main-content.fleet .sustainability,.main-content.fleet #workloads,.main-content.fleet .decision-panel,.main-content.fleet .control-panel,.main-content.fleet .settings-panel{display:none}
+.main-content.fleet .bottom-grid{display:block}
+.main-content.fleet .workload-panel{display:none}
+.main-content.workloads .kpi-grid,.main-content.workloads .optimization-card,.main-content.workloads .dashboard-charts,.main-content.workloads .anomaly-panel,.main-content.workloads .environment-monitor,.main-content.workloads .metrics-panel,.main-content.workloads .quality-panel,.main-content.workloads .sustainability,.main-content.workloads #gpu-fleet,.main-content.workloads .decision-panel,.main-content.workloads .control-panel,.main-content.workloads .settings-panel{display:none}
+.main-content.workloads .bottom-grid{display:block}
+.main-content.workloads .fleet-panel{display:none}
+.main-content.analytics .kpi-grid,.main-content.analytics .optimization-card,.main-content.analytics .dashboard-charts,.main-content.analytics .anomaly-panel,.main-content.analytics .environment-monitor,.main-content.analytics .quality-panel,.main-content.analytics .sustainability,.main-content.analytics .bottom-grid,.main-content.analytics .control-panel,.main-content.analytics .settings-panel{display:none}
+.main-content.analytics .metrics-panel{display:block}
+.main-content.analytics .decision-panel{display:block}
+.main-content.alerts .decision-panel{margin-top:12px}
+.main-content.hardware .environment-monitor{margin-bottom:0}
+.main-content.settings .settings-panel{margin-top:0}
+.main-content.sustainability .sustainability{margin-bottom:0}
+.main-content.fleet .bottom-grid,.main-content.workloads .bottom-grid{margin-bottom:0}
+.main-content.fleet .fleet-panel,.main-content.workloads .workload-panel{margin-bottom:0}
+@media(max-width:1350px){.main-content:not(.sidebar-collapsed){margin-left:252px;width:calc(100% - 252px)}.optimization-card{grid-template-columns:1fr}.config-side{border-right:0;border-bottom:1px solid #e1e6eb}}
+@media(max-width:1000px){.sidebar.expanded{width:225px}.main-content:not(.sidebar-collapsed){margin-left:225px;width:calc(100% - 225px)}.dashboard-charts{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.config-evolution-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.sidebar.expanded{width:205px}.main-content:not(.sidebar-collapsed){margin-left:205px;width:calc(100% - 205px)}.main-content{padding:0 12px 20px}.page-header{height:auto;min-height:76px;padding:14px 0}.header-status{display:none}.kpi-grid{grid-template-columns:1fr}.kpi{height:96px}.config-compare{grid-template-columns:1fr}.config-compare .arrow{transform:rotate(90deg)}.expected-grid{grid-template-columns:repeat(2,1fr);row-gap:10px}.impact-stat:nth-child(2){border-right:0}.dashboard-chart-plot{height:170px}}
