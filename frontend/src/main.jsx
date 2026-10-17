@@ -91,8 +91,10 @@ function App() {
 
   const [range, setRange] = useState(30)
 
-  const [activeNav, setActiveNav] = useState(() => window.location.hash === '#workspace' ? 'workspace' : 'dashboard')
-  const [activePage, setActivePage] = useState(() => window.location.hash === '#workspace' ? 'workspace' : 'dashboard')
+  const initialPage = ['dashboard','optimization','alerts','hardware','settings','sustainability','fleet','workloads','analytics'].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : 'dashboard'
+  const [activeNav, setActiveNav] = useState(initialPage)
+  const [activePage, setActivePage] = useState(initialPage)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
 
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -128,9 +130,10 @@ function App() {
 
   useEffect(() => {
     const syncRoute = () => {
-      const workspace = window.location.hash === '#workspace'
-      setActivePage(workspace ? 'workspace' : 'dashboard')
-      setActiveNav(workspace ? 'workspace' : 'dashboard')
+      const key = window.location.hash.slice(1)
+      const next = ['dashboard','optimization','alerts','hardware','settings','sustainability','fleet','workloads','analytics'].includes(key) ? key : 'dashboard'
+      setActivePage(next)
+      setActiveNav(next)
     }
     window.addEventListener('hashchange', syncRoute)
     return () => window.removeEventListener('hashchange', syncRoute)
@@ -153,7 +156,7 @@ function App() {
       ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       : detectedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     setAnomalyToast({ key: alertKey, text: `Anomaly detected at this time: ${timeText}` })
-    const timeout = setTimeout(() => setAnomalyToast(current => current?.key === alertKey ? null : current), 3000)
+    const timeout = setTimeout(() => setAnomalyToast(current => current?.key === alertKey ? null : current), 6000)
     return () => clearTimeout(timeout)
   }, [data?.anomaly])
 
@@ -343,21 +346,33 @@ function App() {
 
   const nav = [
     ['dashboard', 'Dashboard', LayoutDashboard],
+    ['optimization', 'Optimization Center', Cpu],
+    ['alerts', 'SLA & Alerts', AlertTriangle],
+    ['hardware', 'Hardware & Software Monitor', MonitorCog],
+    ['settings', 'Settings', SlidersHorizontal],
+    ['sustainability', 'Sustainability', Leaf],
     ['fleet', 'GPU Fleet', Server],
-    ['workspace', 'Workspace', Settings],
+    ['workloads', 'AI Workloads', Bot],
+    ['analytics', 'Analytics & History', History],
   ]
+
+  const pageTitles = {
+    dashboard: ['Dashboard', 'Live infrastructure health and autonomous optimization'],
+    optimization: ['Optimization Center', 'Compare configurations, quality gates, and optimization evidence'],
+    alerts: ['SLA & Alerts', 'Telemetry anomaly status and real controller event history'],
+    hardware: ['Hardware & Software Monitor', 'Installed inventory and public release checks'],
+    settings: ['Settings', 'Simulator cadence, controller status, and SLA configuration'],
+    sustainability: ['Sustainability', 'Estimated energy efficiency and thermal impact'],
+    fleet: ['GPU Fleet', 'Live status and allocation across five simulated GPUs'],
+    workloads: ['AI Workloads', 'Current serving demand, latency, and workload protection'],
+    analytics: ['Analytics & History', 'Telemetry trends and recorded controller decisions'],
+  }
 
   const go = (key) => {
     setActiveNav(key)
-    if (key === 'fleet') {
-      setActivePage('dashboard')
-      window.location.hash = 'dashboard'
-      requestAnimationFrame(() => document.getElementById('gpu-fleet')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-    } else {
-      setActivePage(key)
-      window.location.hash = key === 'workspace' ? 'workspace' : 'dashboard'
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+    setActivePage(key)
+    window.location.hash = key
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
 
@@ -366,13 +381,14 @@ function App() {
 
     <div className="app-shell">
 
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : 'expanded'}`}>
 
         <div className="brand">
 
           <div className="brand-mark"><Leaf size={27} strokeWidth={2.3}/></div>
 
-          <div><div className="brand-name">GPUPilot</div><div className="brand-sub">Sustainable AI Infrastructure</div></div>
+          <div className="brand-copy"><div className="brand-name">GPUPilot</div><div className="brand-sub">Sustainable AI Infrastructure</div></div>
+          <button className="sidebar-toggle" onClick={() => setSidebarCollapsed(value => !value)} aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}>{sidebarCollapsed ? '›' : '‹'}</button>
 
         </div>
 
@@ -384,7 +400,7 @@ function App() {
 
             <button key={key} className={`nav-item ${activeNav === key ? 'active' : ''}`} onClick={() => go(key)}>
 
-              <Icon size={20}/><span>{label}</span>
+              <Icon size={19}/><span>{label}</span>
 
             </button>
 
@@ -397,6 +413,7 @@ function App() {
 
 
         <div className="health-card">
+          <div className="sim-controls-label">SIMULATION CONTROLS</div>
 
           <div className="health-title"><span className={`health-dot ${running ? '' : 'offline'}`}/><strong>{running ? 'System Healthy' : 'Simulation Idle'}</strong></div>
 
@@ -426,15 +443,15 @@ function App() {
 
 
 
-      <main className={`main-content ${activePage}`} id="dashboard-top">
+      <main className={`main-content ${activePage} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`} id="dashboard-top">
 
         <header className="page-header">
 
           <div>
 
-            <h1>{activePage === 'workspace' ? 'Secondary Workspace' : 'Dashboard'}</h1>
+            <h1>{pageTitles[activePage]?.[0] || 'Dashboard'}</h1>
 
-            <p>{activePage === 'workspace' ? 'Workloads, decision history, and configuration settings' : 'Real-time GPU Monitoring and Autonomous Optimization'}</p>
+            <p>{pageTitles[activePage]?.[1] || 'Live infrastructure health and autonomous optimization'}</p>
 
           </div>
 
@@ -456,7 +473,7 @@ function App() {
 
         {error && <div className="error-banner"><AlertTriangle size={17}/><span>Backend connection: {error}</span><button onClick={refresh}>Retry</button></div>}
 
-        <section className={`anomaly-panel ${data?.anomaly?.status === 'DETECTED' ? 'detected' : data?.anomaly?.status === 'RECOVERING' ? 'recovering' : 'normal'}`}>
+        <section className={`anomaly-panel ${data?.anomaly?.status === 'DETECTED' ? 'detected' : data?.anomaly?.status === 'RECOVERING' ? 'recovering' : 'normal'}`} id="sla-anomaly">
           <div className="anomaly-icon"><AlertTriangle size={21}/></div>
           <div className="anomaly-copy">
             <div className="anomaly-title-row"><h2>Telemetry Anomaly Detection</h2><span className={`anomaly-status ${String(data?.anomaly?.status || 'NORMAL').toLowerCase()}`}>{data?.anomaly?.status || 'WAITING'}</span></div>
@@ -564,7 +581,7 @@ function App() {
 
             </div>
 
-            {anomalyToast && <div className="anomaly-toast" role="alert" aria-live="assertive"><AlertTriangle size={16}/><span>{anomalyToast.text}</span></div>}
+            {anomalyToast && <div className="anomaly-toast" role="alert" aria-live="assertive"><AlertTriangle size={16}/><span>{anomalyToast.text}</span><button onClick={() => setAnomalyToast(null)} aria-label="Dismiss alert">×</button></div>}
 
             <div className={`autonomous-banner ${auto ? '' : 'inactive'}`} onClick={toggleAutopilot}>
 
@@ -797,7 +814,7 @@ function App() {
 
 
 
-        {(settingsOpen || activePage === 'workspace') && <section className="settings-panel panel" id="settings">
+        {(settingsOpen || activePage === 'settings') && <section className="settings-panel panel" id="settings">
 
           <div className="panel-header simple"><div><h2><SlidersHorizontal size={19}/> Settings</h2><p>Only controls that affect the supplied simulator are exposed.</p></div><button className="close-btn" onClick={()=>setSettingsOpen(false)}>Close</button></div>
 
