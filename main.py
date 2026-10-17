@@ -289,14 +289,21 @@ async def spike(body: Optional[SpikeRequest] = None):
     # Track which generated samples belong to an explicit anomaly demo. Manual
     # workload spikes clear the marker so they do not raise anomaly alerts solely
     # because the UI button was clicked.
+    sample_start = sim.sample_counter + 1
+    sample_end = (
+        sim.sample_counter + body.spike_duration_ticks
+        + (body.peak_hold_ticks or cfg.DEFAULT_PEAK_HOLD_TICKS) + 12
+    )
     if body.trigger_type == "anomaly":
-        sim._gpupilot_anomaly_sample_start = sim.sample_counter + 1
-        sim._gpupilot_anomaly_sample_end = (
-            sim.sample_counter + body.spike_duration_ticks + (body.peak_hold_ticks or cfg.DEFAULT_PEAK_HOLD_TICKS) + 12
-        )
+        sim._gpupilot_anomaly_sample_start = sample_start
+        sim._gpupilot_anomaly_sample_end = sample_end
+        sim._gpupilot_manual_sample_start = None
+        sim._gpupilot_manual_sample_end = None
     else:
         sim._gpupilot_anomaly_sample_start = None
         sim._gpupilot_anomaly_sample_end = None
+        sim._gpupilot_manual_sample_start = sample_start
+        sim._gpupilot_manual_sample_end = sample_end
     hint = "" if runner.running else " (simulation is stopped - call /api/simulation/start or /api/simulation/step)"
     alert_kind = "Anomaly scenario triggered" if body.trigger_type == "anomaly" else "Workload spike triggered"
     return _status(f"{alert_kind} toward {body.peak_rate:.0f} req/min.{hint}")
@@ -551,11 +558,20 @@ def _anomaly_report(samples=None):
                 anomaly_start is not None and anomaly_end is not None
                 and anomaly_start <= sample.sample_id <= anomaly_end
             )
+            manual_start = getattr(sim, "_gpupilot_manual_sample_start", None)
+            manual_end = getattr(sim, "_gpupilot_manual_sample_end", None)
+            is_manual_spike_sample = (
+                manual_start is not None and manual_end is not None
+                and manual_start <= sample.sample_id <= manual_end
+            )
             intentional_spike = (
                 is_anomaly_demo_sample and state_value in ("spike", "peak", "recovery")
                 and demand_jump
             )
-            if (demand_jump and (utilization_impact or power_impact or latency_impact)) or hard_limit or intentional_spike:
+            correlated_anomaly = (
+                demand_jump and (utilization_impact or power_impact or latency_impact)
+            )
+            if (correlated_anomaly and not is_manual_spike_sample) or (hard_limit and not is_manual_spike_sample) or intentional_spike:
                 anomalous_ids.append(sample.sample_id)
                 metrics = []
                 if demand_jump: metrics.append("request rate")
