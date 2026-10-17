@@ -415,3 +415,11 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .main-content.dashboard .optimization-card{display:none}
 @media(max-width:1250px){.reference-optimization{grid-template-columns:1fr 1fr}.reference-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.dashboard-chart-plot{height:160px}}
 @media(max-width:760px){.reference-kpis{grid-template-columns:1fr}.reference-optimization{grid-template-columns:1fr}.dashboard-charts{grid-template-columns:1fr}.dashboard-chart-plot{height:180px}}
+
+/* ConfigBox rows use .config-values > div (not a separate config-row class). */
+.reference-config-card .config-values{display:block}
+.reference-config-card .config-values>div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid #f0f3f8;font-size:12px;min-height:38px}
+.reference-config-card .config-values>div:last-child{border-bottom:0}
+.reference-config-card .config-values>div>span{color:#304565}
+.reference-config-card .config-values>div>b{color:#132344;font-size:12px;text-align:right}
+.recommended-config .config-values>div>b{color:#078348}
