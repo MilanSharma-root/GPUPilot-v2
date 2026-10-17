@@ -218,7 +218,7 @@ function App() {
       method: 'POST',
       body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 12, peak_hold_ticks: 6, trigger_type: 'anomaly' }),
     })
-    setSimulationNotice(result.message || 'Anomaly spike triggered. Watch telemetry for correlated changes.')
+    setSimulationNotice('')
   })
 
   const triggerManualSpike = () => run(async () => {
