@@ -286,8 +286,20 @@ async def reset():
 async def spike(body: Optional[SpikeRequest] = None):
     body = body or SpikeRequest()
     sim.trigger_spike(body.peak_rate, body.spike_duration_ticks, body.peak_hold_ticks)
+    # Track which generated samples belong to an explicit anomaly demo. Manual
+    # workload spikes clear the marker so they do not raise anomaly alerts solely
+    # because the UI button was clicked.
+    if body.trigger_type == "anomaly":
+        sim._gpupilot_anomaly_sample_start = sim.sample_counter + 1
+        sim._gpupilot_anomaly_sample_end = (
+            sim.sample_counter + body.spike_duration_ticks + (body.peak_hold_ticks or cfg.DEFAULT_PEAK_HOLD_TICKS) + 12
+        )
+    else:
+        sim._gpupilot_anomaly_sample_start = None
+        sim._gpupilot_anomaly_sample_end = None
     hint = "" if runner.running else " (simulation is stopped - call /api/simulation/start or /api/simulation/step)"
-    return _status(f"Workload spike triggered toward {body.peak_rate:.0f} req/min.{hint}")
+    alert_kind = "Anomaly scenario triggered" if body.trigger_type == "anomaly" else "Workload spike triggered"
+    return _status(f"{alert_kind} toward {body.peak_rate:.0f} req/min.{hint}")
 
 
 @app.post("/api/simulation/step", response_model=list[TelemetrySample])
@@ -530,10 +542,19 @@ def _anomaly_report(samples=None):
             hard_limit = ((not sample.latency_ok and latency_impact) or
                           (not sample.temperature_ok and sample.temperature >= baseline["temperature"] + 4))
             state_value = getattr(sample.workload_state, "value", sample.workload_state)
-            # A deliberately triggered spike is itself an anomaly scenario when
-            # demand rises above baseline. Do not require power/latency to cross
-            # a second threshold on the same sample; those signals can lag demand.
-            intentional_spike = state_value in ("spike", "peak") and demand_jump
+            # Only the dedicated anomaly button's sample window is force-detected.
+            # A manual spike remains a workload event unless telemetry independently
+            # crosses the normal correlated-deviation / SLA thresholds.
+            anomaly_start = getattr(sim, "_gpupilot_anomaly_sample_start", None)
+            anomaly_end = getattr(sim, "_gpupilot_anomaly_sample_end", None)
+            is_anomaly_demo_sample = (
+                anomaly_start is not None and anomaly_end is not None
+                and anomaly_start <= sample.sample_id <= anomaly_end
+            )
+            intentional_spike = (
+                is_anomaly_demo_sample and state_value in ("spike", "peak", "recovery")
+                and demand_jump
+            )
             if (demand_jump and (utilization_impact or power_impact or latency_impact)) or hard_limit or intentional_spike:
                 anomalous_ids.append(sample.sample_id)
                 metrics = []
