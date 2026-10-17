@@ -104,6 +104,7 @@ function App() {
 
   const [qualityThreshold, setQualityThreshold] = useState(2)
   const [anomalyToast, setAnomalyToast] = useState(null)
+  const [simulationNotice, setSimulationNotice] = useState('')
   const lastAlertKey = useRef(null)
 
 
@@ -213,22 +214,24 @@ function App() {
     if (!data?.simulation?.running) {
       await api(`/simulation/start?tick_interval_s=${interval}`, { method: 'POST' })
     }
-    await api('/simulation/spike', {
+    const result = await api('/simulation/spike', {
       method: 'POST',
-      body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 8, peak_hold_ticks: 4 }),
+      body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 12, peak_hold_ticks: 6 }),
     })
+    setSimulationNotice(result.message || 'Anomaly spike triggered. Watch telemetry for correlated changes.')
   })
 
-  // Separate manual spike control; automatic spikes and the existing anomaly button remain unchanged.
   const triggerManualSpike = () => run(async () => {
     if (!data?.simulation?.running) {
       await api(`/simulation/start?tick_interval_s=${interval}`, { method: 'POST' })
     }
-    await api('/simulation/spike', {
+    const result = await api('/simulation/spike', {
       method: 'POST',
-      body: JSON.stringify({ peak_rate: 1250, spike_duration_ticks: 6, peak_hold_ticks: 3 }),
+      body: JSON.stringify({ peak_rate: 1325, spike_duration_ticks: 8, peak_hold_ticks: 4 }),
     })
+    setSimulationNotice(result.message || 'Manual workload spike triggered.')
   })
+
 
   const evaluateQuality = () => run(async () => {
     const result = await api('/quality/evaluate', { method: 'POST', body: JSON.stringify({ reference_precision: 'FP16', candidate_precision: 'INT8', allowed_degradation_pct: Number(qualityThreshold) }) })
@@ -483,6 +486,7 @@ function App() {
 
         {error && <div className="error-banner"><AlertTriangle size={17}/><span>Backend connection: {error}</span><button onClick={refresh}>Retry</button></div>}
         {anomalyToast && <div className="anomaly-toast" role="alert" aria-live="assertive"><AlertTriangle size={16}/><span>{anomalyToast.text}</span><button onClick={() => setAnomalyToast(null)} aria-label="Dismiss alert">×</button></div>}
+        {simulationNotice && <div className="simulation-action-notice" role="status"><Zap size={16}/><span>{simulationNotice}</span><button onClick={() => setSimulationNotice('')} aria-label="Dismiss simulation notice">×</button></div>}
 
         <section className={`anomaly-panel ${data?.anomaly?.status === 'DETECTED' ? 'detected' : data?.anomaly?.status === 'RECOVERING' ? 'recovering' : 'normal'}`} id="sla-anomaly">
           <div className="anomaly-icon"><AlertTriangle size={21}/></div>
