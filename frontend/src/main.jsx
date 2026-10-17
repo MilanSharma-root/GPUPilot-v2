@@ -525,7 +525,7 @@ function App() {
 
           <Kpi icon={Cpu} label="GPU Utilization" value={fmt(telemetry?.gpu_utilization)} unit=" %" tone="util" history={chartData} dataKey="utilization"/>
 
-          <Kpi icon={BarChart3} label="Request Rate" value={fmt(telemetry?.request_rate)} unit=" req/min" tone="request" history={chartData} dataKey="requestRate"/>
+          <Kpi icon={Server} label="GPU Fleet" value={fmt(data?.cluster?.gpu_count ?? 5)} unit=" GPUs" tone="request" simple/>
 
         </section>
 
@@ -894,7 +894,7 @@ function App() {
 
 
 
-function Kpi({icon:Icon,label,value,unit,tone,history,dataKey}) {
+function Kpi({icon:Icon,label,value,unit,tone,history,dataKey,simple=false}) {
 
   const first = history?.[0]?.[dataKey]
 
@@ -908,11 +908,11 @@ function Kpi({icon:Icon,label,value,unit,tone,history,dataKey}) {
 
     <div className="kpi-body"><span>{label}</span><strong>{value}<small>{unit}</small></strong>
 
-      <div className="kpi-delta"><b>{delta === null ? '—' : `${delta >= 0 ? '↑' : '↓'} ${Math.abs(delta).toFixed(0)}%`}</b><span>vs. recent history</span></div>
+        {!simple && <div className="kpi-delta"><b>{delta === null ? '—' : `${delta >= 0 ? '↑' : '↓'} ${Math.abs(delta).toFixed(0)}%`}</b><span>vs. recent history</span></div>}
 
     </div>
 
-    <div className="spark"><ResponsiveContainer width="100%" height="100%"><AreaChart data={history}><Area dataKey={dataKey} type="linear" strokeWidth={2} fillOpacity={0.12} /></AreaChart></ResponsiveContainer></div>
+    {!simple && <div className="spark"><ResponsiveContainer width="100%" height="100%"><AreaChart data={history}><Area dataKey={dataKey} type="linear" strokeWidth={2} fillOpacity={0.12} /></AreaChart></ResponsiveContainer></div>}
 
   </div>
 
