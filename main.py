@@ -507,6 +507,7 @@ async def workloads():
         "model": "Llama 3 70B",
         "requests_per_min": t.request_rate,
         "latency_ms": t.latency,
+        "latency_p95_ms": t.latency_p95_ms,
         "throughput_req_min": t.throughput,
         "assigned_gpus": active,
         "status": "SLA Protected" if t.sla_status == "PASS" else "Scaling",
@@ -693,10 +694,12 @@ def _optimization_reasons(result):
     elif t.gpu_power >= 240:
         reasons.append("GPU power is elevated for the current workload.")
 
-    if t.latency < sim.sla.max_latency_ms * 0.85:
-        reasons.append("SLA has sufficient latency headroom.")
-    elif t.latency < sim.sla.max_latency_ms:
-        reasons.append("Latency remains within the configured SLA.")
+    if t.latency_p95_ms < sim.sla.max_latency_ms * 0.85:
+        reasons.append("P95 latency has sufficient headroom under the configured SLA.")
+    elif t.latency_p95_ms < sim.sla.max_latency_ms:
+        reasons.append("P95 latency remains within the configured SLA.")
+    else:
+        reasons.append("P95 latency exceeds the configured SLA limit; prioritize tail-latency recovery.")
 
     if current.throughput > 0 and recommended.throughput >= current.throughput * 0.98:
         reasons.append(f"{recommended.configuration.precision} maintains throughput within the current SLA envelope.")
@@ -782,6 +785,7 @@ async def dashboard():
             "configuration": sim.sla.model_dump(),
             "status": t.sla_status,
             "latency_ok": t.latency_ok,
+            "p95_latency_ms": t.latency_p95_ms,
             "throughput_ok": t.throughput_ok,
             "temperature_ok": t.temperature_ok,
         },
