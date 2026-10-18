@@ -548,6 +548,7 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 /* Compact single-row SLA indicator: preserve graph viewport height and keep labels readable. */
 .p95-sla-strip{display:flex;align-items:center;gap:16px;padding:5px 12px;margin:0 0 7px;background:#effaf4;border:1px solid #b8dfc8;border-radius:8px;color:#075c39;min-height:36px;max-height:38px;overflow:hidden}
 .p95-sla-strip.risk{background:#fff8e8;border-color:#edcf8d;color:#854d08}
+.p95-sla-strip.check{background:#fff8e8;border-color:#edcf8d;color:#854d08}
 .p95-sla-strip.violated{background:#fff0f0;border-color:#eab5b5;color:#991b1b}
 .p95-sla-strip.unknown{background:#f3f6fa;border-color:#cbd5e1;color:#334155}
 .p95-strip-status{display:flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
