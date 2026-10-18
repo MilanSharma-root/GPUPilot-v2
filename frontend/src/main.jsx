@@ -528,6 +528,7 @@ function App() {
           <Kpi icon={Power} label="Total GPU Power" value={fmt(telemetry?.total_power, 1)} unit=" W" tone="power" history={chartData} dataKey="power"/>
           <Kpi icon={Thermometer} label="Average Temperature" value={fmt(telemetry?.temperature)} unit=" °C" tone="temperature" history={chartData} dataKey="temperature"/>
           <Kpi icon={Activity} label="Request Rate" value={fmt(telemetry?.request_rate)} unit=" req/min" tone="request" history={chartData} dataKey="requestRate"/>
+          <Kpi icon={Activity} label="P95 Latency" value={fmt(telemetry?.latency_p95_ms, 1)} unit=" ms" tone="latency" simple/>
         </section>
 
 
@@ -554,7 +555,7 @@ function App() {
           <div className="reference-why-card">
             <div className="reference-card-heading"><h2>Why This Optimization?</h2></div>
             <ol className="reference-reasons">{(opt?.reasons || ['Awaiting optimizer evaluation.']).slice(0,4).map((reason,i) => <li key={i}><span>{i+1}</span><div><strong>{['Lower resource intensity','Improved GPU utilization','Higher serving capacity','SLA-aware changes'][i] || 'Optimizer rationale'}</strong><p>{reason}</p></div></li>)}</ol>
-            <div className={`reference-sla-state ${slaPass ? 'pass' : 'watch'}`}><ShieldCheck size={17}/><span><strong>{slaPass ? 'SLA safe' : 'SLA review required'}</strong><small>Latency and throughput guardrails</small></span></div>
+            <div className={`reference-sla-state ${slaPass ? 'pass' : 'watch'}`}><ShieldCheck size={17}/><span><strong>{slaPass ? 'SLA safe' : 'SLA review required'}</strong><small>P95 latency and throughput guardrails</small></span></div>
           </div>
         </section>
 
@@ -830,7 +831,7 @@ function App() {
 
             <div className="setting-state"><span>Autonomous controller</span><b>{auto ? 'Enabled' : 'Disabled'}</b><button onClick={toggleAutopilot}>{auto ? 'Stop' : 'Start'}</button></div>
 
-            <div className="setting-state"><span>Configured SLA</span><b>{data?.sla?.configuration?.max_latency_ms ?? '—'} ms max latency</b><small>{data?.sla?.configuration?.min_throughput_req_min ?? '—'} req/min minimum throughput</small></div>
+            <div className="setting-state"><span>Configured SLA</span><b>{data?.sla?.configuration?.max_latency_ms ?? '—'} ms max P95 latency</b><small>{data?.sla?.configuration?.min_throughput_req_min ?? '—'} req/min minimum throughput</small></div>
 
           </div>
 
