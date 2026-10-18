@@ -838,7 +838,6 @@ function App() {
 
 
 
-        <footer>GPUPilot prototype · 5 simulated GPUs · GPU telemetry is simulated and not physical hardware telemetry.</footer>
 
       </main>
 
