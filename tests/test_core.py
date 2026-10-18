@@ -10,6 +10,22 @@ def test_simulator_has_data():
     assert sim.latest.request_rate > 0
 
 
+def test_simulated_p95_latency_is_present_and_used_for_sla():
+    sim = GPUSimulator(seed=123)
+    sample = sim.latest
+    assert sample.latency_p95_ms > 0
+    assert sample.latency_p95_ms >= sample.latency
+    assert sample.latency_ok == (sample.latency_p95_ms <= sim.sla.max_latency_ms)
+
+
+def test_p95_latency_is_used_for_steady_state_sla():
+    sim = GPUSimulator(seed=123)
+    estimate = sim.estimate_steady_state(sim.configuration)
+    assert estimate.latency_p95_ms >= estimate.latency
+    assert estimate.sla.p95_latency_ms == estimate.latency_p95_ms
+    assert estimate.sla.latency_ok == (estimate.latency_p95_ms <= sim.sla.max_latency_ms)
+
+
 def test_optimizer_respects_sla():
     sim = GPUSimulator()
     result = GPUPilotOptimizer(sim).optimize()
