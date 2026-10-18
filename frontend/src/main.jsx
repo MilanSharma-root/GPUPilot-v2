@@ -524,7 +524,7 @@ function App() {
         </section>
 
         <section className="kpi-grid reference-kpis" aria-label="Infrastructure summary">
-          <Kpi icon={Cpu} label="Total GPUs" value={fmt(data?.cluster?.gpu_count)} unit=" GPUs" tone="util" simple/>
+          <Kpi icon={Cpu} label="Total GPUs" value={fmt(data?.cluster?.gpu_count)} unit="" tone="util" simple/>
           <Kpi icon={Power} label="Total GPU Power" value={fmt(telemetry?.total_power, 1)} unit=" W" tone="power" history={chartData} dataKey="power"/>
           <Kpi icon={Thermometer} label="Average Temperature" value={fmt(telemetry?.temperature)} unit=" °C" tone="temperature" history={chartData} dataKey="temperature"/>
           <Kpi icon={Activity} label="Request Rate" value={fmt(telemetry?.request_rate)} unit=" req/min" tone="request" history={chartData} dataKey="requestRate"/>
