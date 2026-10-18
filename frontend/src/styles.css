@@ -502,3 +502,7 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
   .main-content.dashboard .reference-sla-state{padding:8px 10px;margin:2px 10px 10px;}
   .main-content.dashboard .dashboard-chart-plot{height:145px;}
 }
+
+
+/* Make the longer GPU-count unit quieter, matching the visual weight of W, °C and req/min. */
+.reference-kpis .kpi.util .kpi-body strong small{font-size:10px!important;font-weight:500!important;color:#334b70!important;letter-spacing:0!important;margin-left:3px!important;}
