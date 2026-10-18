@@ -544,3 +544,21 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .p95-sla-state.risk .p95-sla-track i{background:#d97706}
 .p95-sla-state.violated .p95-sla-track i{background:#dc2626}
 .p95-sla-note{display:block;margin-top:6px;font-size:9px;line-height:1.35;color:inherit;opacity:.85}
+
+/* Fixed-position SLA strip between the KPI row and dynamic optimization reasons. */
+.p95-sla-strip{display:grid;grid-template-columns:auto auto auto minmax(160px,1fr);align-items:center;gap:18px;padding:8px 14px;margin:0 0 10px;background:#effaf4;border:1px solid #cfe8da;border-radius:9px;color:#087b4d;min-height:48px}
+.p95-sla-strip.risk{background:#fff8e8;border-color:#f2d69c;color:#9a6509}
+.p95-sla-strip.violated{background:#fff0f0;border-color:#efc2c2;color:#b42323}
+.p95-sla-strip.unknown{background:#f3f6fa;border-color:#dfe6ee;color:#637188}
+.p95-strip-status{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.p95-strip-status strong{font-size:11px}
+.p95-strip-metric{display:flex;flex-direction:column;gap:2px;white-space:nowrap}
+.p95-strip-metric span{font-size:9px;opacity:.8}
+.p95-strip-metric strong{font-size:12px}
+.p95-strip-meter{min-width:0}
+.p95-strip-meter .p95-sla-track{margin:0;height:5px}
+.p95-strip-meter .p95-sla-track i{background:#16a34a}
+.p95-sla-strip.risk .p95-sla-track i{background:#d97706}
+.p95-sla-strip.violated .p95-sla-track i{background:#dc2626}
+.p95-strip-meter small{display:block;font-size:9px;margin-top:4px;opacity:.8}
+@media(max-width:900px){.p95-sla-strip{grid-template-columns:1fr 1fr;gap:8px}.p95-strip-meter{grid-column:1/-1}}
