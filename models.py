@@ -49,12 +49,15 @@ class ConfigurationUpdate(BaseModel):
 
 # --------------------------------------------------------------------- SLA
 class SLAConfig(BaseModel):
-    max_latency_ms: float = Field(200.0, gt=0)
+    max_latency_ms: float = Field(
+        200.0, gt=0,
+        description="Maximum allowed P95 request latency in milliseconds.")
     min_throughput_req_min: float = Field(700.0, gt=0)
     max_temperature_c: float = Field(85.0, gt=0)
 
 
 class SLAResult(BaseModel):
+    p95_latency_ms: float
     latency_ok: bool
     throughput_ok: bool
     temperature_ok: bool
@@ -72,7 +75,8 @@ class TelemetrySample(BaseModel):
     temperature: float              # C   (per-GPU average)
     memory: float                   # GB  (per-GPU average)
     request_rate: int               # req/min offered
-    latency: float                  # ms
+    latency: float                  # representative/central latency, ms
+    latency_p95_ms: float           # simulated 95th-percentile request latency, ms
     throughput: int                 # req/min served
     sla_status: Literal["PASS", "FAIL"]
     latency_ok: bool
@@ -127,6 +131,7 @@ class SteadyStateEstimate(BaseModel):
     temperature: float
     memory: float
     latency: float
+    latency_p95_ms: float
     throughput: float
     serving_capacity: float
     num_gpus: int
