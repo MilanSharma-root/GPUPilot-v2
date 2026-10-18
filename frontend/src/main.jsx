@@ -348,15 +348,19 @@ function App() {
   const impact = opt?.expected_impact?.changes || {}
 
   const slaPass = data?.sla?.status === 'PASS'
+  const slaStatusAvailable = ['PASS', 'FAIL'].includes(data?.sla?.status)
   const p95Latency = Number(telemetry?.latency_p95_ms)
   const p95Limit = Number(data?.sla?.configuration?.max_latency_ms)
   const p95Available = Number.isFinite(p95Latency) && p95Latency >= 0 &&
     Number.isFinite(p95Limit) && p95Limit > 0
   const p95Headroom = p95Available ? p95Limit - p95Latency : null
   const p95UsedPct = p95Available ? (p95Latency / p95Limit) * 100 : null
-  const p95State = !p95Available ? 'unknown' :
+  // Do not show an overall green SLA state from latency alone: throughput and
+  // temperature are also part of the backend's SLA result.
+  const p95State = !p95Available || !slaStatusAvailable ? 'unknown' :
     p95Latency > p95Limit ? 'violated' :
-    p95Latency >= p95Limit * 0.9 ? 'risk' : 'safe'
+    p95Latency >= p95Limit * 0.9 ? 'risk' :
+    !slaPass ? 'check' : 'safe'
 
   const running = data?.simulation?.running
 
@@ -540,7 +544,7 @@ function App() {
         </section>
 
         <section className={`p95-sla-strip ${p95State}`} aria-label="P95 SLA headroom">
-          <div className="p95-strip-status"><ShieldCheck size={16}/><strong>{p95State === 'safe' ? 'SLA SAFE' : p95State === 'risk' ? 'SLA AT RISK' : p95State === 'violated' ? 'SLA VIOLATED' : 'SLA UNAVAILABLE'}</strong></div>
+          <div className="p95-strip-status"><ShieldCheck size={16}/><strong>{p95State === 'safe' ? 'SLA SAFE' : p95State === 'risk' ? 'SLA AT RISK' : p95State === 'check' ? 'SLA CHECK' : p95State === 'violated' ? 'SLA VIOLATED' : 'SLA UNAVAILABLE'}</strong></div>
           <div className="p95-strip-metric p95-current"><span>P95 latency</span><strong>{p95Available ? `${fmt(p95Latency, 1)} ms` : '—'}</strong><small>/ {p95Available ? `${fmt(p95Limit, 1)} ms limit` : 'limit unavailable'}</small></div>
           <div className="p95-strip-metric"><span>Headroom</span><strong>{p95Available ? `${p95Headroom >= 0 ? '' : '−'}${fmt(Math.abs(p95Headroom), 1)} ms` : '—'}</strong></div>
           <div className="p95-strip-meter"><div className="p95-sla-track" role="progressbar" aria-label="P95 latency as a percentage of SLA limit" aria-valuemin="0" aria-valuemax="100" aria-valuenow={p95Available ? Math.max(0, Math.min(100, p95UsedPct)) : 0}><i style={{width: p95Available ? `${Math.max(0, Math.min(100, p95UsedPct))}%` : '0%'}}/></div><small>{p95Available ? `${fmt(p95UsedPct, 1)}% of limit used` : 'Waiting for P95 telemetry and SLA limit'}</small></div>
