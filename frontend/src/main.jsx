@@ -540,10 +540,10 @@ function App() {
         </section>
 
         <section className={`p95-sla-strip ${p95State}`} aria-label="P95 SLA headroom">
-          <div className="p95-strip-status"><ShieldCheck size={17}/><strong>{p95State === 'safe' ? 'P95 SLA SAFE' : p95State === 'risk' ? 'P95 SLA AT RISK' : p95State === 'violated' ? 'P95 SLA VIOLATED' : 'P95 SLA UNAVAILABLE'}</strong></div>
-          <div className="p95-strip-metric"><span>P95 limit</span><strong>{p95Available ? `${fmt(p95Limit, 1)} ms` : '—'}</strong></div>
+          <div className="p95-strip-status"><ShieldCheck size={16}/><strong>{p95State === 'safe' ? 'SLA SAFE' : p95State === 'risk' ? 'SLA AT RISK' : p95State === 'violated' ? 'SLA VIOLATED' : 'SLA UNAVAILABLE'}</strong></div>
+          <div className="p95-strip-metric p95-current"><span>P95 latency</span><strong>{p95Available ? `${fmt(p95Latency, 1)} ms` : '—'}</strong><small>/ {p95Available ? `${fmt(p95Limit, 1)} ms limit` : 'limit unavailable'}</small></div>
           <div className="p95-strip-metric"><span>Headroom</span><strong>{p95Available ? `${p95Headroom >= 0 ? '' : '−'}${fmt(Math.abs(p95Headroom), 1)} ms` : '—'}</strong></div>
-          <div className="p95-strip-meter"><div className="p95-sla-track" role="progressbar" aria-label="P95 latency as a percentage of SLA limit" aria-valuemin="0" aria-valuemax="100" aria-valuenow={p95Available ? Math.max(0, Math.min(100, p95UsedPct)) : 0}><i style={{width: p95Available ? `${Math.max(0, Math.min(100, p95UsedPct))}%` : '0%'}}/></div><small>{p95Available ? `${fmt(p95UsedPct, 1)}% of latency limit used` : 'Waiting for P95 telemetry and SLA limit'}</small></div>
+          <div className="p95-strip-meter"><div className="p95-sla-track" role="progressbar" aria-label="P95 latency as a percentage of SLA limit" aria-valuemin="0" aria-valuemax="100" aria-valuenow={p95Available ? Math.max(0, Math.min(100, p95UsedPct)) : 0}><i style={{width: p95Available ? `${Math.max(0, Math.min(100, p95UsedPct))}%` : '0%'}}/></div><small>{p95Available ? `${fmt(p95UsedPct, 1)}% of limit used` : 'Waiting for P95 telemetry and SLA limit'}</small></div>
         </section>
 
         <section className="reference-optimization" id="ai-controller" aria-label="AI optimization recommendation">
