@@ -125,11 +125,32 @@ def throughput_target(req: float, capacity: float) -> float:
     return req * capacity / (req ** p + capacity ** p) ** (1.0 / p)
 
 
-def check_sla(sla: SLAConfig, latency: float, throughput: float, temp: float) -> SLAResult:
-    l_ok = latency <= sla.max_latency_ms
+def _latency_spread(rho: float) -> float:
+    """Synthetic request-latency spread; tail variance grows as the service saturates."""
+    return min(0.45, 0.12 + 0.22 * max(0.0, rho - 0.65))
+
+
+def estimate_p95_latency(latency_ms: float, rho: float) -> float:
+    """Analytic P95 estimate for a log-normal request-latency distribution."""
+    sigma = _latency_spread(rho)
+    return max(0.0, latency_ms) * math.exp(1.6448536269514722 * sigma - 0.5 * sigma * sigma)
+
+
+def sample_p95_latency(latency_ms: float, rho: float, rng: np.random.Generator,
+                        sample_count: int = 128) -> float:
+    """Generate request-level simulated latencies and calculate their empirical P95."""
+    sigma = _latency_spread(rho)
+    median = max(latency_ms, 0.1)
+    requests = rng.lognormal(mean=math.log(median), sigma=sigma, size=sample_count)
+    return float(np.percentile(requests, 95))
+
+
+def check_sla(sla: SLAConfig, latency_p95: float, throughput: float, temp: float) -> SLAResult:
+    l_ok = latency_p95 <= sla.max_latency_ms
     t_ok = throughput >= sla.min_throughput_req_min
     c_ok = temp <= sla.max_temperature_c
-    return SLAResult(latency_ok=l_ok, throughput_ok=t_ok, temperature_ok=c_ok,
+    return SLAResult(p95_latency_ms=round(latency_p95, 1), latency_ok=l_ok,
+                     throughput_ok=t_ok, temperature_ok=c_ok,
                      sla_status="PASS" if (l_ok and t_ok and c_ok) else "FAIL")
 
 
@@ -147,7 +168,7 @@ class _Latent:
 
 class GPUSimulator:
     COMPARE_KEYS = ["request_rate", "gpu_utilization", "gpu_power", "total_power",
-                    "temperature", "memory", "latency", "throughput"]
+                    "temperature", "memory", "latency", "latency_p95_ms", "throughput"]
 
     def __init__(self, seed: Optional[int] = None):
         # Default runs are intentionally varied; pass an integer seed for reproducible tests.
@@ -350,8 +371,12 @@ class GPUSimulator:
         temp_o = clamp_metric("temperature", s.temp + rng.normal(0, 0.05))
         lat_o = clamp_metric("latency", s.lat * (1 + rng.normal(0, 0.012)))
 
-        # 9. SLA
-        sla = check_sla(self.sla, lat_o, thr_o, temp_o)
+        # Generate request-level latency samples for an empirical P95 estimate.
+        # These are simulated requests, not measurements from real inference traffic.
+        latency_p95_o = clamp_metric("latency", sample_p95_latency(lat_o, rho, rng))
+
+        # 9. SLA: the configured latency limit applies to P95, not central latency.
+        sla = check_sla(self.sla, latency_p95_o, thr_o, temp_o)
 
         # 10. store
         self.sample_counter += 1
@@ -360,7 +385,8 @@ class GPUSimulator:
             sample_id=self.sample_counter, timestamp=ts, workload_state=self.state,
             gpu_utilization=round(util_o, 1), gpu_power=round(power, 1),
             temperature=round(temp_o, 1), memory=round(mem_o, 2),
-            request_rate=int(round(req_o)), latency=round(lat_o, 1), throughput=int(round(thr_o)),
+            request_rate=int(round(req_o)), latency=round(lat_o, 1),
+            latency_p95_ms=round(latency_p95_o, 1), throughput=int(round(thr_o)),
             sla_status=sla.sla_status, latency_ok=sla.latency_ok,
             throughput_ok=sla.throughput_ok, temperature_ok=sla.temperature_ok,
             serving_capacity=int(round(cap)), num_gpus=n,
@@ -418,14 +444,16 @@ class GPUSimulator:
             power = clamp_metric("gpu_power", power_from_util(c, util))
             temp = clamp_metric("temperature", temperature_target(power))
         lat = clamp_metric("latency", latency_target(c, rho))
+        lat_p95 = clamp_metric("latency", estimate_p95_latency(lat, rho))
         thr = clamp_metric("throughput", min(throughput_target(req, cap), req))
         mem = clamp_metric("memory", memory_target(c, rho))
         n = c.gpu_allocation * c.replicas
-        sla = check_sla(self.sla, lat, thr, temp)
+        sla = check_sla(self.sla, lat_p95, thr, temp)
         return SteadyStateEstimate(
             configuration=c, request_rate=round(req, 1), gpu_utilization=round(util, 1),
             gpu_power=round(power, 1), temperature=round(temp, 1), memory=round(mem, 2),
-            latency=round(lat, 1), throughput=round(thr, 1), serving_capacity=round(cap, 1),
+            latency=round(lat, 1), latency_p95_ms=round(lat_p95, 1),
+            throughput=round(thr, 1), serving_capacity=round(cap, 1),
             num_gpus=n, total_power=round(power * n, 1), total_memory=round(mem * n, 2),
             sla=sla, feasible=sla.sla_status == "PASS")
 
