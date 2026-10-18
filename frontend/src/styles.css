@@ -476,3 +476,10 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 /* Keep the GPU count unit visually balanced with the other KPI units. */
 .reference-kpis .kpi.util .kpi-body strong{display:flex;align-items:baseline;gap:3px;}
 .reference-kpis .kpi.util .kpi-body strong small{font-size:11px!important;font-weight:500!important;letter-spacing:0;line-height:1;}
+
+
+/* Compact the dashboard page header so it doesn't consume excessive vertical space. */
+.main-content .page-header{height:64px;min-height:64px;margin-bottom:10px;}
+.main-content .page-header h1{line-height:1.15;}
+.main-content .page-header p{margin-top:3px;line-height:1.25;}
+@media(max-width:720px){.main-content .page-header{height:auto;min-height:58px;padding:10px 0;margin-bottom:8px;}}
