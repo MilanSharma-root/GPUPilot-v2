@@ -465,7 +465,7 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .simulation-action-notice button{margin-left:auto;border:0;background:transparent;color:#173d6b;font-size:20px;cursor:pointer;padding:0 2px}
 
 /* Keep all four dashboard KPI cards identical in width and align values consistently. */
-.reference-kpis{grid-template-columns:repeat(5,minmax(0,1fr));}
+.reference-kpis{grid-template-columns:repeat(4,minmax(0,1fr));}
 .reference-kpis .kpi{width:100%;min-width:0;min-height:122px;}
 .reference-kpis .kpi-body{flex:1;min-width:0;}
 .reference-kpis .kpi-body strong{font-size:22px;letter-spacing:0;white-space:nowrap;}
