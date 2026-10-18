@@ -574,7 +574,7 @@ function App() {
 
         <section className="dashboard-charts" aria-label="Before and after optimization telemetry">
           <section className="panel dashboard-chart">
-            <div className="dashboard-chart-header"><div><h2>Power · Before vs After</h2><p>Live total GPU power (W)</p></div><span className="chart-state">{running ? 'LIVE TELEMETRY' : 'LAST RECORDED'}</span></div>
+            <div className="dashboard-chart-header"><div><h2>Power</h2><div className="dashboard-chart-subline"><p>Live total GPU power (W)</p><div className="before-after-legend"><span><i className="before-line"/>Before</span><span><i className="after-line"/>After</span></div></div></div><span className="chart-state">{running ? 'LIVE TELEMETRY' : 'LAST RECORDED'}</span></div>
             <div className="dashboard-chart-plot">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{top:5,right:8,left:-18,bottom:0}}>
@@ -590,7 +590,7 @@ function App() {
             </div>
           </section>
           <section className="panel dashboard-chart">
-            <div className="dashboard-chart-header"><div><h2>Temperature · Before vs After</h2><p>GPU thermal load (°C)</p></div><span className="chart-state">{slaPass ? 'SLA IN RANGE' : 'CHECK SLA'}</span></div>
+            <div className="dashboard-chart-header"><div><h2>Temperature</h2><div className="dashboard-chart-subline"><p>GPU thermal load (°C)</p><div className="before-after-legend"><span><i className="before-line"/>Before</span><span><i className="after-line"/>After</span></div></div></div><span className="chart-state">{slaPass ? 'SLA IN RANGE' : 'CHECK SLA'}</span></div>
             <div className="dashboard-chart-plot">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{top:5,right:8,left:-18,bottom:0}}>
