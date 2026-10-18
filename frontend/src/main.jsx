@@ -539,7 +539,12 @@ function App() {
           <Kpi icon={Activity} label="P95 Latency" value={fmt(telemetry?.latency_p95_ms, 1)} unit=" ms" tone="latency" simple/>
         </section>
 
-
+        <section className={`p95-sla-strip ${p95State}`} aria-label="P95 SLA headroom">
+          <div className="p95-strip-status"><ShieldCheck size={17}/><strong>{p95State === 'safe' ? 'P95 SLA SAFE' : p95State === 'risk' ? 'P95 SLA AT RISK' : p95State === 'violated' ? 'P95 SLA VIOLATED' : 'P95 SLA UNAVAILABLE'}</strong></div>
+          <div className="p95-strip-metric"><span>P95 limit</span><strong>{p95Available ? `${fmt(p95Limit, 1)} ms` : '—'}</strong></div>
+          <div className="p95-strip-metric"><span>Headroom</span><strong>{p95Available ? `${p95Headroom >= 0 ? '' : '−'}${fmt(Math.abs(p95Headroom), 1)} ms` : '—'}</strong></div>
+          <div className="p95-strip-meter"><div className="p95-sla-track" role="progressbar" aria-label="P95 latency as a percentage of SLA limit" aria-valuemin="0" aria-valuemax="100" aria-valuenow={p95Available ? Math.max(0, Math.min(100, p95UsedPct)) : 0}><i style={{width: p95Available ? `${Math.max(0, Math.min(100, p95UsedPct))}%` : '0%'}}/></div><small>{p95Available ? `${fmt(p95UsedPct, 1)}% of latency limit used` : 'Waiting for P95 telemetry and SLA limit'}</small></div>
+        </section>
 
         <section className="reference-optimization" id="ai-controller" aria-label="AI optimization recommendation">
           <div className="reference-config-card current-config">
@@ -563,20 +568,7 @@ function App() {
           <div className="reference-why-card">
             <div className="reference-card-heading"><h2>Why This Optimization?</h2></div>
             <ol className="reference-reasons">{(opt?.reasons || ['Awaiting optimizer evaluation.']).slice(0,4).map((reason,i) => <li key={i}><span>{i+1}</span><div><strong>{['Lower resource intensity','Improved GPU utilization','Higher serving capacity','SLA-aware changes'][i] || 'Optimizer rationale'}</strong><p>{reason}</p></div></li>)}</ol>
-            <div className={`reference-sla-state p95-sla-state ${p95State}`}>
-              <div className="p95-sla-heading">
-                <ShieldCheck size={17}/>
-                <span><strong>{p95State === 'safe' ? 'P95 SLA safe' : p95State === 'risk' ? 'P95 SLA at risk' : p95State === 'violated' ? 'P95 SLA violated' : 'P95 SLA unavailable'}</strong><small>{p95Available ? `Limit: ${fmt(p95Limit, 1)} ms` : 'Waiting for valid P95 and SLA limit'}</small></span>
-              </div>
-              <div className="p95-sla-details">
-                <div><span>Headroom</span><strong>{p95Available ? `${p95Headroom >= 0 ? '' : '−'}${fmt(Math.abs(p95Headroom), 1)} ms` : '—'}</strong></div>
-                <div><span>Limit used</span><strong>{p95Available ? `${fmt(p95UsedPct, 1)}%` : '—'}</strong></div>
-              </div>
-              <div className="p95-sla-track" role="progressbar" aria-label="P95 latency as a percentage of SLA limit" aria-valuemin="0" aria-valuemax="100" aria-valuenow={p95Available ? Math.max(0, Math.min(100, p95UsedPct)) : 0}>
-                <i style={{width: p95Available ? `${Math.max(0, Math.min(100, p95UsedPct))}%` : '0%'}}/>
-              </div>
-              <small className="p95-sla-note">{p95State === 'safe' ? 'Latency is below 90% of its configured limit.' : p95State === 'risk' ? 'Latency has used at least 90% of its configured limit.' : p95State === 'violated' ? 'Latency exceeds the configured P95 limit.' : 'Status appears when backend telemetry is available.'}</small>
-            </div>
+
           </div>
         </section>
 
