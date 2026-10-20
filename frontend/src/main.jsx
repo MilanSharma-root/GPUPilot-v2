@@ -386,7 +386,7 @@ function App() {
 
   const pageTitles = {
     dashboard: ['Dashboard', 'Live infrastructure health and autonomous optimization'],
-    optimization: ['Optimization Center', 'Compare configurations and optimization evidence'],
+    optimization: ['Optimization Center', 'Compare configurations and review optimization impact'],
     quality: ['Quality Gate', 'Validate precision changes against an allowed quality-degradation threshold'],
     alerts: ['SLA & Alerts', 'Telemetry anomaly status and real controller event history'],
     hardware: ['Hardware & Software Monitor', 'Installed inventory and public release checks'],
