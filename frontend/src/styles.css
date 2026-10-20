@@ -575,3 +575,12 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .before-after-legend .before-line{background:#ef4444}
 .before-after-legend .after-line{background:#1683ff}
 @media(max-width:1100px){.dashboard-chart-subline{gap:8px}.before-after-legend{gap:7px}.before-after-legend span{font-size:10px}}
+
+
+/* Sidebar navigation labels: keep all items readable on the dark navy rail. */
+.sidebar .nav-item{color:#f8fafc}
+.sidebar .nav-item span{color:inherit}
+.sidebar .nav-item svg{color:#b9c7d8}
+.sidebar .nav-item:hover{color:#ffffff}
+.sidebar .nav-item.active{color:#ffffff}
+.sidebar .nav-item.active svg{color:#52e0ae}
