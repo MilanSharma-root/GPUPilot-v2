@@ -584,3 +584,20 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .sidebar .nav-item:hover{color:#ffffff}
 .sidebar .nav-item.active{color:#ffffff}
 .sidebar .nav-item.active svg{color:#52e0ae}
+
+
+/* Quality Gate gets its own navigation page; keep its evaluation panel out of Optimization Center. */
+.main-content.optimization .quality-panel{display:none!important}
+.main-content.quality .kpi-grid,
+.main-content.quality .optimization-card,
+.main-content.quality .reference-optimization,
+.main-content.quality .dashboard-charts,
+.main-content.quality .anomaly-panel,
+.main-content.quality .environment-monitor,
+.main-content.quality .metrics-panel,
+.main-content.quality .sustainability,
+.main-content.quality .bottom-grid,
+.main-content.quality .decision-panel,
+.main-content.quality .control-panel,
+.main-content.quality .settings-panel{display:none!important}
+.main-content.quality .quality-panel{display:block!important;margin-top:0;max-width:100%}
