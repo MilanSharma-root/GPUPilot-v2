@@ -610,3 +610,8 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .sidebar.expanded .health-card{left:auto;right:auto}
 .sidebar.collapsed .health-card{left:auto;right:auto}
 @media(max-height:760px){.sidebar .side-nav{padding-top:8px;padding-bottom:6px;gap:2px}.sidebar .nav-item{min-height:40px}.sidebar .health-card{padding-top:7px;padding-bottom:7px}.sidebar .health-card p{margin-top:4px;margin-bottom:5px}.sidebar .side-action{height:29px;margin-top:4px}.sidebar .last-run{margin-top:5px}}
+
+/* Optimization Center focuses on the recommendation; detailed historical telemetry lives in Analytics & History. */
+.main-content.optimization .metrics-panel{display:none!important}
+.main-content.optimization .dashboard-charts{display:none!important}
+.main-content.optimization .quality-panel{display:none!important}
