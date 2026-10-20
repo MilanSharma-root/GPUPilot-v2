@@ -286,8 +286,27 @@ async def reset():
 async def spike(body: Optional[SpikeRequest] = None):
     body = body or SpikeRequest()
     sim.trigger_spike(body.peak_rate, body.spike_duration_ticks, body.peak_hold_ticks)
+    # Track which generated samples belong to an explicit anomaly demo. Manual
+    # workload spikes clear the marker so they do not raise anomaly alerts solely
+    # because the UI button was clicked.
+    sample_start = sim.sample_counter + 1
+    sample_end = (
+        sim.sample_counter + body.spike_duration_ticks
+        + (body.peak_hold_ticks or cfg.DEFAULT_PEAK_HOLD_TICKS) + 12
+    )
+    if body.trigger_type == "anomaly":
+        sim._gpupilot_anomaly_sample_start = sample_start
+        sim._gpupilot_anomaly_sample_end = sample_end
+        sim._gpupilot_manual_sample_start = None
+        sim._gpupilot_manual_sample_end = None
+    else:
+        sim._gpupilot_anomaly_sample_start = None
+        sim._gpupilot_anomaly_sample_end = None
+        sim._gpupilot_manual_sample_start = sample_start
+        sim._gpupilot_manual_sample_end = sample_end
     hint = "" if runner.running else " (simulation is stopped - call /api/simulation/start or /api/simulation/step)"
-    return _status(f"Workload spike triggered toward {body.peak_rate:.0f} req/min.{hint}")
+    alert_kind = "Anomaly scenario triggered" if body.trigger_type == "anomaly" else "Workload spike triggered"
+    return _status(f"{alert_kind} toward {body.peak_rate:.0f} req/min.{hint}")
 
 
 @app.post("/api/simulation/step", response_model=list[TelemetrySample])
@@ -488,6 +507,7 @@ async def workloads():
         "model": "Llama 3 70B",
         "requests_per_min": t.request_rate,
         "latency_ms": t.latency,
+        "latency_p95_ms": t.latency_p95_ms,
         "throughput_req_min": t.throughput,
         "assigned_gpus": active,
         "status": "SLA Protected" if t.sla_status == "PASS" else "Scaling",
@@ -529,7 +549,30 @@ def _anomaly_report(samples=None):
             # must also deviate materially from its normal baseline.
             hard_limit = ((not sample.latency_ok and latency_impact) or
                           (not sample.temperature_ok and sample.temperature >= baseline["temperature"] + 4))
-            if (demand_jump and (utilization_impact or power_impact or latency_impact)) or hard_limit:
+            state_value = getattr(sample.workload_state, "value", sample.workload_state)
+            # Only the dedicated anomaly button's sample window is force-detected.
+            # A manual spike remains a workload event unless telemetry independently
+            # crosses the normal correlated-deviation / SLA thresholds.
+            anomaly_start = getattr(sim, "_gpupilot_anomaly_sample_start", None)
+            anomaly_end = getattr(sim, "_gpupilot_anomaly_sample_end", None)
+            is_anomaly_demo_sample = (
+                anomaly_start is not None and anomaly_end is not None
+                and anomaly_start <= sample.sample_id <= anomaly_end
+            )
+            manual_start = getattr(sim, "_gpupilot_manual_sample_start", None)
+            manual_end = getattr(sim, "_gpupilot_manual_sample_end", None)
+            is_manual_spike_sample = (
+                manual_start is not None and manual_end is not None
+                and manual_start <= sample.sample_id <= manual_end
+            )
+            intentional_spike = (
+                is_anomaly_demo_sample and state_value in ("spike", "peak", "recovery")
+                and demand_jump
+            )
+            correlated_anomaly = (
+                demand_jump and (utilization_impact or power_impact or latency_impact)
+            )
+            if (correlated_anomaly and not is_manual_spike_sample) or (hard_limit and not is_manual_spike_sample) or intentional_spike:
                 anomalous_ids.append(sample.sample_id)
                 metrics = []
                 if demand_jump: metrics.append("request rate")
@@ -538,11 +581,15 @@ def _anomaly_report(samples=None):
                 if latency_impact: metrics.append("latency")
                 if not sample.temperature_ok: metrics.append("temperature SLA")
                 if not sample.latency_ok: metrics.append("latency SLA")
+                if intentional_spike and not any(m in metrics for m in ("GPU utilization", "GPU power", "latency")):
+                    metrics.append("workload spike")
                 event_details[sample.sample_id] = {
                     "sample_id": sample.sample_id,
                     "timestamp": sample.timestamp.isoformat(),
                     "metrics": metrics,
-                    "reason": ("Request burst caused correlated telemetry deviation: " + ", ".join(metrics)
+                    "reason": ("Intentional workload spike detected against the normal request-rate baseline: " + ", ".join(metrics)
+                               if intentional_spike else
+                               "Request burst caused correlated telemetry deviation: " + ", ".join(metrics)
                                if demand_jump else "Configured SLA/thermal limit was breached: " + ", ".join(metrics)),
                     "severity": "critical" if hard_limit or not sample.throughput_ok else "warning",
                 }
@@ -647,10 +694,12 @@ def _optimization_reasons(result):
     elif t.gpu_power >= 240:
         reasons.append("GPU power is elevated for the current workload.")
 
-    if t.latency < sim.sla.max_latency_ms * 0.85:
-        reasons.append("SLA has sufficient latency headroom.")
-    elif t.latency < sim.sla.max_latency_ms:
-        reasons.append("Latency remains within the configured SLA.")
+    if t.latency_p95_ms < sim.sla.max_latency_ms * 0.85:
+        reasons.append("P95 latency has sufficient headroom under the configured SLA.")
+    elif t.latency_p95_ms < sim.sla.max_latency_ms:
+        reasons.append("P95 latency remains within the configured SLA.")
+    else:
+        reasons.append("P95 latency exceeds the configured SLA limit; prioritize tail-latency recovery.")
 
     if current.throughput > 0 and recommended.throughput >= current.throughput * 0.98:
         reasons.append(f"{recommended.configuration.precision} maintains throughput within the current SLA envelope.")
@@ -736,6 +785,7 @@ async def dashboard():
             "configuration": sim.sla.model_dump(),
             "status": t.sla_status,
             "latency_ok": t.latency_ok,
+            "p95_latency_ms": t.latency_p95_ms,
             "throughput_ok": t.throughput_ok,
             "temperature_ok": t.temperature_ok,
         },

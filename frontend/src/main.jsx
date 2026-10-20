@@ -91,8 +91,10 @@ function App() {
 
   const [range, setRange] = useState(30)
 
-  const [activeNav, setActiveNav] = useState(() => window.location.hash === '#workspace' ? 'workspace' : 'dashboard')
-  const [activePage, setActivePage] = useState(() => window.location.hash === '#workspace' ? 'workspace' : 'dashboard')
+  const initialPage = ['dashboard','optimization','alerts','hardware','settings','sustainability','fleet','workloads','analytics'].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : 'dashboard'
+  const [activeNav, setActiveNav] = useState(initialPage)
+  const [activePage, setActivePage] = useState(initialPage)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
 
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -102,6 +104,7 @@ function App() {
 
   const [qualityThreshold, setQualityThreshold] = useState(2)
   const [anomalyToast, setAnomalyToast] = useState(null)
+  const [simulationNotice, setSimulationNotice] = useState('')
   const lastAlertKey = useRef(null)
 
 
@@ -128,9 +131,10 @@ function App() {
 
   useEffect(() => {
     const syncRoute = () => {
-      const workspace = window.location.hash === '#workspace'
-      setActivePage(workspace ? 'workspace' : 'dashboard')
-      setActiveNav(workspace ? 'workspace' : 'dashboard')
+      const key = window.location.hash.slice(1)
+      const next = ['dashboard','optimization','alerts','hardware','settings','sustainability','fleet','workloads','analytics'].includes(key) ? key : 'dashboard'
+      setActivePage(next)
+      setActiveNav(next)
     }
     window.addEventListener('hashchange', syncRoute)
     return () => window.removeEventListener('hashchange', syncRoute)
@@ -153,9 +157,14 @@ function App() {
       ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       : detectedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     setAnomalyToast({ key: alertKey, text: `Anomaly detected at this time: ${timeText}` })
-    const timeout = setTimeout(() => setAnomalyToast(current => current?.key === alertKey ? null : current), 3000)
+  }, [data?.anomaly?.status, data?.anomaly?.last_detected_at, (data?.anomaly?.sample_ids || []).slice(-1)[0]])
+
+  useEffect(() => {
+    if (!anomalyToast?.key) return
+    const key = anomalyToast.key
+    const timeout = setTimeout(() => setAnomalyToast(current => current?.key === key ? null : current), 6000)
     return () => clearTimeout(timeout)
-  }, [data?.anomaly])
+  }, [anomalyToast?.key])
 
 
 
@@ -205,22 +214,24 @@ function App() {
     if (!data?.simulation?.running) {
       await api(`/simulation/start?tick_interval_s=${interval}`, { method: 'POST' })
     }
-    await api('/simulation/spike', {
+    const result = await api('/simulation/spike', {
       method: 'POST',
-      body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 8, peak_hold_ticks: 4 }),
+      body: JSON.stringify({ peak_rate: 1450, spike_duration_ticks: 6, peak_hold_ticks: 3, trigger_type: 'anomaly' }),
     })
+    setSimulationNotice('')
   })
 
-  // Separate manual spike control; automatic spikes and the existing anomaly button remain unchanged.
   const triggerManualSpike = () => run(async () => {
     if (!data?.simulation?.running) {
       await api(`/simulation/start?tick_interval_s=${interval}`, { method: 'POST' })
     }
-    await api('/simulation/spike', {
+    const result = await api('/simulation/spike', {
       method: 'POST',
-      body: JSON.stringify({ peak_rate: 1250, spike_duration_ticks: 6, peak_hold_ticks: 3 }),
+      body: JSON.stringify({ peak_rate: 1325, spike_duration_ticks: 8, peak_hold_ticks: 4, trigger_type: 'manual' }),
     })
+    setSimulationNotice(result.message || 'Manual workload spike triggered.')
   })
+
 
   const evaluateQuality = () => run(async () => {
     const result = await api('/quality/evaluate', { method: 'POST', body: JSON.stringify({ reference_precision: 'FP16', candidate_precision: 'INT8', allowed_degradation_pct: Number(qualityThreshold) }) })
@@ -285,10 +296,16 @@ function App() {
 
       }
       row.anomalyMetric = row.isAnomaly ? row[metric === 'power' ? 'power' : 'temperature'] : null
+      row.anomalyPower = row.isAnomaly ? row.power : null
+      row.anomalyTemperature = row.isAnomaly ? row.temperature : null
 
       row.before = appliedAt && ts >= appliedAt ? null : row[metric]
 
       row.after = appliedAt && ts >= appliedAt ? row[metric] : null
+      row.beforePower = appliedAt && ts >= appliedAt ? null : row.power
+      row.afterPower = appliedAt && ts >= appliedAt ? row.power : null
+      row.beforeTemperature = appliedAt && ts >= appliedAt ? null : row.temperature
+      row.afterTemperature = appliedAt && ts >= appliedAt ? row.temperature : null
 
       return row
 
@@ -331,6 +348,19 @@ function App() {
   const impact = opt?.expected_impact?.changes || {}
 
   const slaPass = data?.sla?.status === 'PASS'
+  const slaStatusAvailable = ['PASS', 'FAIL'].includes(data?.sla?.status)
+  const p95Latency = Number(telemetry?.latency_p95_ms)
+  const p95Limit = Number(data?.sla?.configuration?.max_latency_ms)
+  const p95Available = Number.isFinite(p95Latency) && p95Latency >= 0 &&
+    Number.isFinite(p95Limit) && p95Limit > 0
+  const p95Headroom = p95Available ? p95Limit - p95Latency : null
+  const p95UsedPct = p95Available ? (p95Latency / p95Limit) * 100 : null
+  // Do not show an overall green SLA state from latency alone: throughput and
+  // temperature are also part of the backend's SLA result.
+  const p95State = !p95Available || !slaStatusAvailable ? 'unknown' :
+    p95Latency > p95Limit ? 'violated' :
+    p95Latency >= p95Limit * 0.9 ? 'risk' :
+    !slaPass ? 'check' : 'safe'
 
   const running = data?.simulation?.running
 
@@ -343,21 +373,35 @@ function App() {
 
   const nav = [
     ['dashboard', 'Dashboard', LayoutDashboard],
+    ['optimization', 'Optimization Center', Cpu],
+    ['quality', 'Quality Gate', ShieldCheck],
+    ['alerts', 'SLA & Alerts', AlertTriangle],
+    ['hardware', 'Hardware & Software Monitor', MonitorCog],
+    ['settings', 'Settings', SlidersHorizontal],
+    ['sustainability', 'Sustainability', Leaf],
     ['fleet', 'GPU Fleet', Server],
-    ['workspace', 'Workspace', Settings],
+    ['workloads', 'AI Workloads', Bot],
+    ['analytics', 'Analytics & History', History],
   ]
+
+  const pageTitles = {
+    dashboard: ['Dashboard', 'Live infrastructure health and autonomous optimization'],
+    optimization: ['Optimization Center', 'Compare configurations and optimization evidence'],
+    quality: ['Quality Gate', 'Validate precision changes against an allowed quality-degradation threshold'],
+    alerts: ['SLA & Alerts', 'Telemetry anomaly status and real controller event history'],
+    hardware: ['Hardware & Software Monitor', 'Installed inventory and public release checks'],
+    settings: ['Settings', 'Simulator cadence, controller status, and SLA configuration'],
+    sustainability: ['Sustainability', 'Estimated energy efficiency and thermal impact'],
+    fleet: ['GPU Fleet', 'Live status and allocation across five simulated GPUs'],
+    workloads: ['AI Workloads', 'Current serving demand, latency, and workload protection'],
+    analytics: ['Analytics & History', 'Telemetry trends and recorded controller decisions'],
+  }
 
   const go = (key) => {
     setActiveNav(key)
-    if (key === 'fleet') {
-      setActivePage('dashboard')
-      window.location.hash = 'dashboard'
-      requestAnimationFrame(() => document.getElementById('gpu-fleet')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-    } else {
-      setActivePage(key)
-      window.location.hash = key === 'workspace' ? 'workspace' : 'dashboard'
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+    setActivePage(key)
+    window.location.hash = key
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
 
@@ -366,13 +410,14 @@ function App() {
 
     <div className="app-shell">
 
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : 'expanded'}`}>
 
         <div className="brand">
 
           <div className="brand-mark"><Leaf size={27} strokeWidth={2.3}/></div>
 
-          <div><div className="brand-name">GPUPilot</div><div className="brand-sub">Sustainable AI Infrastructure</div></div>
+          <div className="brand-copy"><div className="brand-name">GPUPilot</div><div className="brand-sub">Sustainable AI Infrastructure</div></div>
+          <button className="sidebar-toggle" onClick={() => setSidebarCollapsed(value => !value)} aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}>{sidebarCollapsed ? '›' : '‹'}</button>
 
         </div>
 
@@ -382,9 +427,9 @@ function App() {
 
           {nav.map(([key, label, Icon, id]) => (
 
-            <button key={key} className={`nav-item ${activeNav === key ? 'active' : ''}`} onClick={() => go(key)}>
+            <button key={key} title={label} aria-label={label} className={`nav-item ${activeNav === key ? 'active' : ''}`} onClick={() => go(key)}>
 
-              <Icon size={20}/><span>{label}</span>
+              <Icon size={19}/><span>{label}</span>
 
             </button>
 
@@ -397,6 +442,7 @@ function App() {
 
 
         <div className="health-card">
+          <div className="sim-controls-label">SIMULATION CONTROLS</div>
 
           <div className="health-title"><span className={`health-dot ${running ? '' : 'offline'}`}/><strong>{running ? 'System Healthy' : 'Simulation Idle'}</strong></div>
 
@@ -410,7 +456,8 @@ function App() {
 
           </button>
 
-          <button className="side-action primary" onClick={start} disabled={busy}><Play size={17} fill="currentColor"/>Start Simulation</button>
+          <button className="side-action primary" title="Start simulation" onClick={start} disabled={busy}><Play size={17} fill="currentColor"/>Start Simulation</button>
+          <button className="side-action stop" title="Stop simulation" onClick={stop} disabled={busy}><Square size={15}/>Stop Simulation</button>
 
           <button className="side-action warning side-spike-trigger" onClick={triggerAnomalySpike} disabled={busy}><Zap size={17} fill="currentColor"/>Trigger Anomaly Spike</button>
 
@@ -426,15 +473,15 @@ function App() {
 
 
 
-      <main className={`main-content ${activePage}`} id="dashboard-top">
+      <main className={`main-content ${activePage} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`} id="dashboard-top">
 
         <header className="page-header">
 
           <div>
 
-            <h1>{activePage === 'workspace' ? 'Secondary Workspace' : 'Dashboard'}</h1>
+            <h1>{pageTitles[activePage]?.[0] || 'Dashboard'}</h1>
 
-            <p>{activePage === 'workspace' ? 'Workloads, decision history, and configuration settings' : 'Real-time GPU Monitoring and Autonomous Optimization'}</p>
+            <p>{pageTitles[activePage]?.[1] || 'Live infrastructure health and autonomous optimization'}</p>
 
           </div>
 
@@ -455,8 +502,10 @@ function App() {
 
 
         {error && <div className="error-banner"><AlertTriangle size={17}/><span>Backend connection: {error}</span><button onClick={refresh}>Retry</button></div>}
+        {anomalyToast && <div className="anomaly-toast" role="alert" aria-live="assertive"><AlertTriangle size={16}/><span>{anomalyToast.text}</span><button onClick={() => setAnomalyToast(null)} aria-label="Dismiss alert">×</button></div>}
+        {simulationNotice && <div className="simulation-action-notice" role="status"><Zap size={16}/><span>{simulationNotice}</span><button onClick={() => setSimulationNotice('')} aria-label="Dismiss simulation notice">×</button></div>}
 
-        <section className={`anomaly-panel ${data?.anomaly?.status === 'DETECTED' ? 'detected' : data?.anomaly?.status === 'RECOVERING' ? 'recovering' : 'normal'}`}>
+        <section className={`anomaly-panel ${data?.anomaly?.status === 'DETECTED' ? 'detected' : data?.anomaly?.status === 'RECOVERING' ? 'recovering' : 'normal'}`} id="sla-anomaly">
           <div className="anomaly-icon"><AlertTriangle size={21}/></div>
           <div className="anomaly-copy">
             <div className="anomaly-title-row"><h2>Telemetry Anomaly Detection</h2><span className={`anomaly-status ${String(data?.anomaly?.status || 'NORMAL').toLowerCase()}`}>{data?.anomaly?.status || 'WAITING'}</span></div>
@@ -489,94 +538,80 @@ function App() {
           <small className="environment-disclaimer">This feature checks public release information only. It does not read or change a physical GPU driver, and update candidates require manual compatibility verification.</small>
         </section>
 
-        <section className="kpi-grid">
-
-          <Kpi icon={Power} label="Total GPU Power" value={fmt(telemetry?.total_power)} unit=" W" tone="power" history={chartData} dataKey="power"/>
-
-          <Kpi icon={Thermometer} label="Temperature" value={fmt(telemetry?.temperature)} unit=" °C" tone="temperature" history={chartData} dataKey="temperature"/>
-
-          <Kpi icon={Cpu} label="GPU Utilization" value={fmt(telemetry?.gpu_utilization)} unit=" %" tone="util" history={chartData} dataKey="utilization"/>
-
-          <Kpi icon={BarChart3} label="Request Rate" value={fmt(telemetry?.request_rate)} unit=" req/min" tone="request" history={chartData} dataKey="requestRate"/>
-
+        <section className="kpi-grid reference-kpis" aria-label="Infrastructure summary">
+          <Kpi icon={Power} label="Total GPU Power" value={fmt(telemetry?.total_power, 1)} unit=" W" tone="power" history={chartData} dataKey="power"/>
+          <Kpi icon={Thermometer} label="Average Temperature" value={fmt(telemetry?.temperature)} unit=" °C" tone="temperature" history={chartData} dataKey="temperature"/>
+          <Kpi icon={Activity} label="Request Rate" value={fmt(telemetry?.request_rate)} unit=" req/min" tone="request" history={chartData} dataKey="requestRate"/>
+          <Kpi icon={Activity} label="P95 Latency" value={fmt(telemetry?.latency_p95_ms, 1)} unit=" ms" tone="latency" simple/>
         </section>
 
+        <section className={`p95-sla-strip ${p95State}`} aria-label="P95 SLA headroom">
+          <div className="p95-strip-status"><ShieldCheck size={16}/><strong>{p95State === 'safe' ? 'SLA SAFE' : p95State === 'risk' ? 'SLA AT RISK' : p95State === 'check' ? 'SLA CHECK' : p95State === 'violated' ? 'SLA VIOLATED' : 'SLA UNAVAILABLE'}</strong></div>
+          <div className="p95-strip-metric p95-current"><span>P95 latency</span><strong>{p95Available ? `${fmt(p95Latency, 1)} ms` : '—'}</strong><small>/ {p95Available ? `${fmt(p95Limit, 1)} ms limit` : 'limit unavailable'}</small></div>
+          <div className="p95-strip-metric"><span>Headroom</span><strong>{p95Available ? `${p95Headroom >= 0 ? '' : '−'}${fmt(Math.abs(p95Headroom), 1)} ms` : '—'}</strong></div>
+          <div className="p95-strip-meter"><div className="p95-sla-track" role="progressbar" aria-label="P95 latency as a percentage of SLA limit" aria-valuemin="0" aria-valuemax="100" aria-valuenow={p95Available ? Math.max(0, Math.min(100, p95UsedPct)) : 0}><i style={{width: p95Available ? `${Math.max(0, Math.min(100, p95UsedPct))}%` : '0%'}}/></div><small>{p95Available ? `${fmt(p95UsedPct, 1)}% of limit used` : 'Waiting for P95 telemetry and SLA limit'}</small></div>
+        </section>
 
-
-        <section className="optimization-card" id="ai-controller">
-
-          <div className="config-side">
-
-            <div className="section-title"><Cpu size={19}/><h2>Current <span>→</span> Optimized Configuration</h2></div>
-
-            <div className="config-compare">
-
-              <ConfigBox title="Current (Before)" config={current}/>
-
-              <div className="arrow">→</div>
-
-              <ConfigBox title={recommendationApplied ? "Optimized (Applied by AI)" : "AI Recommendation (Not Applied)"} config={recommended} optimized/>
-
-            </div>
-
-            <div className="config-evolution">
-              <div className="section-title"><History size={18}/><h3>Configuration Evolution</h3><span className="live-badge"><i/>Live</span></div>
-              <p className="config-evolution-note">Recent unique configurations selected from live workload conditions.</p>
-              <div className="config-evolution-grid">
-                {(data?.configuration_history || []).map((item, i) => (
-                  <div className="config-mini" key={`${item.timestamp}-${i}`}>
-                    <div className="config-mini-head"><b>#{i + 1}</b><span>{String(item.workload_state).toUpperCase()}</span></div>
-                    <strong>{item.configuration.precision} · B{item.configuration.batch_size}</strong>
-                    <div>GPU {item.configuration.gpu_allocation} · R{item.configuration.replicas} · C{item.configuration.concurrency}</div>
-                    <small>{fmt(item.request_rate)} req/min</small>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+        <section className="reference-optimization" id="ai-controller" aria-label="AI optimization recommendation">
+          <div className="reference-config-card current-config">
+            <div className="reference-card-heading"><h2>Current Configuration (Before)</h2></div>
+            <ConfigBox title="" config={current}/>
           </div>
-
-          <div className="why-side">
-
-            <div className="section-title"><Zap size={19}/><h2>Why this optimization?</h2></div>
-
-            <ul>{(opt?.reasons || ['Awaiting optimizer evaluation.']).map((r,i) => <li key={i}>{r}</li>)}</ul>
-
-            <div className="optimizer-status-line">
-              <span>Background optimizer</span><b>{data?.optimizer_status?.evaluation_running ? 'Evaluating' : (data?.optimizer_status?.worker_running ? 'Idle / scheduled' : 'Starting')}</b>
-              <small>Last evaluation: {data?.optimizer_status?.last_evaluation_at ? new Date(data.optimizer_status.last_evaluation_at).toLocaleTimeString() : 'waiting for first cycle'}</small>
-            </div>
-            <div className="performance-metrics">
-              <div><span>Primary SLA Latency</span><strong>{fmt(opt?.current_estimate?.latency, 1)} <small>ms current</small></strong><em>{fmt(opt?.recommended_estimate?.latency, 1)} ms optimized</em></div>
-              <div><span>Throughput</span><strong>{fmt(opt?.current_estimate?.throughput)} <small>req/min current</small></strong><em>{fmt(opt?.recommended_estimate?.throughput)} req/min optimized</em></div>
-            </div>
-            <div className="impact-heading">Expected Impact <span>(vs. Current)</span></div>
-
-            <div className="expected-grid">
-
-              <ImpactStat label="Power" value={impact?.power_reduction_pct} suffix="%" direction="down"/>
-
+          <div className="reference-config-card recommended-config">
+            <div className="reference-card-heading"><h2>AI Recommended Configuration</h2><span className="recommended-pill">Recommended</span></div>
+            <ConfigBox title="" config={recommended} optimized/>
+            <div className="reference-apply-state">{recommendationApplied ? 'Recommendation applied by AI controller' : 'Recommendation awaiting application'}</div>
+          </div>
+          <div className="reference-impact-card">
+            <div className="reference-card-heading"><h2>Expected Impact</h2></div>
+            <div className="reference-impact-list">
+              <ImpactStat label="GPU Power" value={impact?.power_reduction_pct} suffix="%" direction="down"/>
               <ImpactStat label="Temperature" value={impact?.temperature_reduction_c} suffix="°C" direction="down"/>
-
               <ImpactStat label="Throughput" value={impact?.throughput_change_req_min} suffix=" req/min" direction="up" neutral/>
-
-              <ImpactStat label="SLA" value={slaPass ? 'Maintained' : 'Failed'} sla/>
-
+              <ImpactStat label="SLA Status" value={slaPass ? 'Pass' : 'Check'} sla/>
             </div>
-
-            {anomalyToast && <div className="anomaly-toast" role="alert" aria-live="assertive"><AlertTriangle size={16}/><span>{anomalyToast.text}</span></div>}
-
-            <div className={`autonomous-banner ${auto ? '' : 'inactive'}`} onClick={toggleAutopilot}>
-
-              <ShieldCheck size={21}/><div><strong>{auto ? 'Autonomous Optimization Active' : 'Autonomous Optimization Inactive'}</strong><span>{auto ? 'Optimization automatically applied by AI Controller.' : 'Enable Autonomous Mode to apply feasible recommendations.'}</span></div>
-
-            </div>
+          </div>
+          <div className="reference-why-card">
+            <div className="reference-card-heading"><h2>Why This Optimization?</h2></div>
+            <ol className="reference-reasons">{(opt?.reasons || ['Awaiting optimizer evaluation.']).slice(0,4).map((reason,i) => <li key={i}><span>{i+1}</span><div><strong>{['Lower resource intensity','Improved GPU utilization','Higher serving capacity','SLA-aware changes'][i] || 'Optimizer rationale'}</strong><p>{reason}</p></div></li>)}</ol>
 
           </div>
-
         </section>
 
-
+        <section className="dashboard-charts" aria-label="Before and after optimization telemetry">
+          <section className="panel dashboard-chart">
+            <div className="dashboard-chart-header"><div><h2>Power</h2><div className="dashboard-chart-subline"><p>Live total GPU power (W)</p><div className="before-after-legend"><span><i className="before-line"/>Before</span><span><i className="after-line"/>After</span></div></div></div><span className="chart-state">{running ? 'LIVE TELEMETRY' : 'LAST RECORDED'}</span></div>
+            <div className="dashboard-chart-plot">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{top:5,right:8,left:-18,bottom:0}}>
+                  <CartesianGrid strokeDasharray="3 4"/>
+                  <XAxis dataKey="time" minTickGap={40}/>
+                  <YAxis domain={['auto','auto']}/>
+                  <Tooltip formatter={(v)=>[v == null ? 'N/A' : `${fmt(v,1)} W`]}/>
+                  <Line type="monotone" dataKey="beforePower" name="Before" stroke="#c94b4b" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                  <Line type="monotone" dataKey="afterPower" name="After" stroke="#167bce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                  <Line type="monotone" dataKey="anomalyPower" name="Detected anomaly" stroke="#e03439" strokeWidth={0} dot={{ r: 5, fill: '#e03439', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 7 }} connectNulls={false} isAnimationActive={false}/>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+          <section className="panel dashboard-chart">
+            <div className="dashboard-chart-header"><div><h2>Temperature</h2><div className="dashboard-chart-subline"><p>GPU thermal load (°C)</p><div className="before-after-legend"><span><i className="before-line"/>Before</span><span><i className="after-line"/>After</span></div></div></div><span className="chart-state">{slaPass ? 'SLA IN RANGE' : 'CHECK SLA'}</span></div>
+            <div className="dashboard-chart-plot">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{top:5,right:8,left:-18,bottom:0}}>
+                  <CartesianGrid strokeDasharray="3 4"/>
+                  <XAxis dataKey="time" minTickGap={40}/>
+                  <YAxis domain={['auto','auto']}/>
+                  <Tooltip formatter={(v)=>[v == null ? 'N/A' : `${fmt(v,1)} °C`]}/>
+                  <Line type="monotone" dataKey="beforeTemperature" name="Before" stroke="#c94b4b" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                  <Line type="monotone" dataKey="afterTemperature" name="After" stroke="#167bce" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>
+                  <Line type="monotone" dataKey="anomalyTemperature" name="Detected anomaly" stroke="#e03439" strokeWidth={0} dot={{ r: 5, fill: '#e03439', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 7 }} connectNulls={false} isAnimationActive={false}/>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        </section>
 
         <section className="panel metrics-panel" id="live-monitoring">
 
@@ -797,7 +832,7 @@ function App() {
 
 
 
-        {(settingsOpen || activePage === 'workspace') && <section className="settings-panel panel" id="settings">
+        {(settingsOpen || activePage === 'settings') && <section className="settings-panel panel" id="settings">
 
           <div className="panel-header simple"><div><h2><SlidersHorizontal size={19}/> Settings</h2><p>Only controls that affect the supplied simulator are exposed.</p></div><button className="close-btn" onClick={()=>setSettingsOpen(false)}>Close</button></div>
 
@@ -815,7 +850,7 @@ function App() {
 
             <div className="setting-state"><span>Autonomous controller</span><b>{auto ? 'Enabled' : 'Disabled'}</b><button onClick={toggleAutopilot}>{auto ? 'Stop' : 'Start'}</button></div>
 
-            <div className="setting-state"><span>Configured SLA</span><b>{data?.sla?.configuration?.max_latency_ms ?? '—'} ms max latency</b><small>{data?.sla?.configuration?.min_throughput_req_min ?? '—'} req/min minimum throughput</small></div>
+            <div className="setting-state"><span>Configured SLA</span><b>{data?.sla?.configuration?.max_latency_ms ?? '—'} ms max P95 latency</b><small>{data?.sla?.configuration?.min_throughput_req_min ?? '—'} req/min minimum throughput</small></div>
 
           </div>
 
@@ -823,7 +858,6 @@ function App() {
 
 
 
-        <footer>GPUPilot prototype · 5 simulated GPUs · GPU telemetry is simulated and not physical hardware telemetry.</footer>
 
       </main>
 
@@ -835,7 +869,7 @@ function App() {
 
 
 
-function Kpi({icon:Icon,label,value,unit,tone,history,dataKey}) {
+function Kpi({icon:Icon,label,value,unit,tone,history,dataKey,simple=false}) {
 
   const first = history?.[0]?.[dataKey]
 
@@ -849,11 +883,11 @@ function Kpi({icon:Icon,label,value,unit,tone,history,dataKey}) {
 
     <div className="kpi-body"><span>{label}</span><strong>{value}<small>{unit}</small></strong>
 
-      <div className="kpi-delta"><b>{delta === null ? '—' : `${delta >= 0 ? '↑' : '↓'} ${Math.abs(delta).toFixed(0)}%`}</b><span>vs. recent history</span></div>
+        {!simple && <div className="kpi-delta"><b>{delta === null ? '—' : `${delta >= 0 ? '↑' : '↓'} ${Math.abs(delta).toFixed(0)}%`}</b><span>vs. recent history</span></div>}
 
     </div>
 
-    <div className="spark"><ResponsiveContainer width="100%" height="100%"><AreaChart data={history}><Area dataKey={dataKey} type="linear" strokeWidth={2} fillOpacity={0.12} /></AreaChart></ResponsiveContainer></div>
+    {!simple && <div className="spark"><ResponsiveContainer width="100%" height="100%"><AreaChart data={history}><Area dataKey={dataKey} type="linear" strokeWidth={2} fillOpacity={0.12} /></AreaChart></ResponsiveContainer></div>}
 
   </div>
 
