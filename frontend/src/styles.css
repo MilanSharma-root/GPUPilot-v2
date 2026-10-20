@@ -601,3 +601,12 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .main-content.quality .control-panel,
 .main-content.quality .settings-panel{display:none!important}
 .main-content.quality .quality-panel{display:block!important;margin-top:0;max-width:100%}
+
+/* Keep sidebar navigation and simulation controls reachable on shorter screens. */
+.sidebar{display:flex;flex-direction:column;height:100dvh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#42536b #101d35}
+.sidebar .brand{flex:none}
+.sidebar .side-nav{flex:0 0 auto;min-height:0}
+.sidebar .health-card{position:relative;left:auto;right:auto;bottom:auto;flex:0 0 auto;margin-top:auto;margin-left:0;margin-right:0}
+.sidebar.expanded .health-card{left:auto;right:auto}
+.sidebar.collapsed .health-card{left:auto;right:auto}
+@media(max-height:760px){.sidebar .side-nav{padding-top:8px;padding-bottom:6px;gap:2px}.sidebar .nav-item{min-height:40px}.sidebar .health-card{padding-top:7px;padding-bottom:7px}.sidebar .health-card p{margin-top:4px;margin-bottom:5px}.sidebar .side-action{height:29px;margin-top:4px}.sidebar .last-run{margin-top:5px}}
