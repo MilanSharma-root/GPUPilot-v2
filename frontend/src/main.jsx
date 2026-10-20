@@ -374,6 +374,7 @@ function App() {
   const nav = [
     ['dashboard', 'Dashboard', LayoutDashboard],
     ['optimization', 'Optimization Center', Cpu],
+    ['quality', 'Quality Gate', ShieldCheck],
     ['alerts', 'SLA & Alerts', AlertTriangle],
     ['hardware', 'Hardware & Software Monitor', MonitorCog],
     ['settings', 'Settings', SlidersHorizontal],
@@ -385,7 +386,8 @@ function App() {
 
   const pageTitles = {
     dashboard: ['Dashboard', 'Live infrastructure health and autonomous optimization'],
-    optimization: ['Optimization Center', 'Compare configurations, quality gates, and optimization evidence'],
+    optimization: ['Optimization Center', 'Compare configurations and optimization evidence'],
+    quality: ['Quality Gate', 'Validate precision changes against an allowed quality-degradation threshold'],
     alerts: ['SLA & Alerts', 'Telemetry anomaly status and real controller event history'],
     hardware: ['Hardware & Software Monitor', 'Installed inventory and public release checks'],
     settings: ['Settings', 'Simulator cadence, controller status, and SLA configuration'],
