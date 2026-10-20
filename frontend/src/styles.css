@@ -692,3 +692,6 @@ body{min-width:320px;background:#f5f7fa;color:#152238}
 .whatif-search-result p{font-size:11px;line-height:1.5;color:#526781;margin:0}
 .whatif-search-result>div>span:not(.eyebrow){font-size:10px;color:#526781}
 @media(max-width:1000px){.whatif-layout{grid-template-columns:1fr}.whatif-empty{min-height:150px}.optimization-workspace-hero{align-items:flex-start;flex-direction:column}.whatif-search-result{grid-template-columns:1fr}}
+
+/* Optimization Center removed from the app UI; keep routing safe by hiding any legacy workspace styles. */
+.optimization-workspace{display:none!important}
