@@ -101,6 +101,8 @@ function App() {
   const [interval, setIntervalValue] = useState(1)
 
   const [quality, setQuality] = useState(null)
+  const [optimizationRun, setOptimizationRun] = useState(null)
+  const [optimizationRunAt, setOptimizationRunAt] = useState(null)
 
   const [qualityThreshold, setQualityThreshold] = useState(2)
   const [anomalyToast, setAnomalyToast] = useState(null)
@@ -236,6 +238,12 @@ function App() {
   const evaluateQuality = () => run(async () => {
     const result = await api('/quality/evaluate', { method: 'POST', body: JSON.stringify({ reference_precision: 'FP16', candidate_precision: 'INT8', allowed_degradation_pct: Number(qualityThreshold) }) })
     setQuality(result)
+  })
+
+  const runOptimization = () => run(async () => {
+    const result = await api('/optimize')
+    setOptimizationRun(result)
+    setOptimizationRunAt(new Date().toISOString())
   })
 
   const toggleAutopilot = () => run(() =>
@@ -500,6 +508,37 @@ function App() {
         </header>
 
 
+
+        {activePage === 'optimization' && <section className="optimization-workspace">
+          <div className="optimization-workspace-hero">
+            <div>
+              <span className="eyebrow">OPTIMIZATION ENGINE</span>
+              <h2>Find the best SLA-safe configuration</h2>
+              <p>Evaluate candidate precision, batch size, concurrency and GPU allocation against latency, throughput and thermal guardrails.</p>
+            </div>
+            <button className="optimization-run-button" onClick={runOptimization} disabled={busy}><Zap size={17}/>{busy ? 'Evaluating candidates…' : 'Run Optimization'}</button>
+          </div>
+          <div className="optimization-workspace-stats">
+            <div><span>Candidates evaluated</span><strong>{optimizationRun?.candidates_checked ?? data?.optimization?.candidates_checked ?? '—'}</strong></div>
+            <div><span>SLA-feasible candidates</span><strong>{optimizationRun?.feasible_candidates ?? data?.optimization?.feasible_candidates ?? '—'}</strong></div>
+            <div><span>Simulation</span><strong>{data?.simulation?.running ? 'Running' : 'Idle'}</strong></div>
+            <div><span>Last run</span><strong>{optimizationRunAt ? new Date(optimizationRunAt).toLocaleTimeString() : 'Not run this session'}</strong></div>
+          </div>
+          <div className="optimization-workspace-grid">
+            <article className="optimization-workspace-card recommended">
+              <div className="optimization-workspace-card-head"><div><span className="eyebrow">ENGINE OUTPUT</span><h3>Recommended configuration</h3></div><span className="recommended-pill">Recommended</span></div>
+              {(optimizationRun?.recommended_configuration || data?.optimization?.recommended_configuration) ? <div className="optimization-config-list">
+                {Object.entries(optimizationRun?.recommended_configuration || data?.optimization?.recommended_configuration || {}).map(([key,value]) => <div key={key}><span>{key.replaceAll('_',' ').replace(/\b\w/g, ch => ch.toUpperCase())}</span><strong>{String(value)}</strong></div>)}
+              </div> : <p className="optimization-empty">Run optimization to generate a candidate recommendation.</p>}
+            </article>
+            <article className="optimization-workspace-card">
+              <div className="optimization-workspace-card-head"><div><span className="eyebrow">DECISION BASIS</span><h3>Why this candidate?</h3></div></div>
+              <p className="optimization-reason">{optimizationRun?.reason || data?.optimization?.reason || 'Run the optimizer to see its latest decision rationale.'}</p>
+              <div className="optimization-result-footer">{(optimizationRun?.feasible_candidates ?? data?.optimization?.feasible_candidates ?? 0) > 0 ? 'At least one candidate satisfies the configured guardrails.' : 'No SLA-feasible candidate is currently reported.'}</div>
+            </article>
+          </div>
+          <p className="optimization-workspace-note">This action evaluates candidates; it does not apply the recommendation. Use the autonomous controller workflow to apply and verify changes.</p>
+        </section>}
 
         {error && <div className="error-banner"><AlertTriangle size={17}/><span>Backend connection: {error}</span><button onClick={refresh}>Retry</button></div>}
         {anomalyToast && <div className="anomaly-toast" role="alert" aria-live="assertive"><AlertTriangle size={16}/><span>{anomalyToast.text}</span><button onClick={() => setAnomalyToast(null)} aria-label="Dismiss alert">×</button></div>}
