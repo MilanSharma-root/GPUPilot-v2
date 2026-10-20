@@ -103,6 +103,9 @@ function App() {
   const [quality, setQuality] = useState(null)
   const [optimizationRun, setOptimizationRun] = useState(null)
   const [optimizationRunAt, setOptimizationRunAt] = useState(null)
+  const [scenarioDraft, setScenarioDraft] = useState(null)
+  const [scenarioRate, setScenarioRate] = useState('')
+  const [scenarioEstimate, setScenarioEstimate] = useState(null)
 
   const [qualityThreshold, setQualityThreshold] = useState(2)
   const [anomalyToast, setAnomalyToast] = useState(null)
@@ -244,6 +247,12 @@ function App() {
     const result = await api('/optimize')
     setOptimizationRun(result)
     setOptimizationRunAt(new Date().toISOString())
+  })
+
+  const currentScenario = scenarioDraft || data?.configuration || { precision: 'FP16', batch_size: 16, gpu_allocation: 1, replicas: 1, concurrency: 32 }
+  const evaluateScenario = () => run(async () => {
+    const result = await api('/configuration/evaluate', { method: 'POST', body: JSON.stringify({ configuration: currentScenario, request_rate: Number(scenarioRate || data?.telemetry?.request_rate || 900) }) })
+    setScenarioEstimate(result)
   })
 
   const toggleAutopilot = () => run(() =>
@@ -511,33 +520,41 @@ function App() {
 
         {activePage === 'optimization' && <section className="optimization-workspace">
           <div className="optimization-workspace-hero">
-            <div>
-              <span className="eyebrow">OPTIMIZATION ENGINE</span>
-              <h2>Find the best SLA-safe configuration</h2>
-              <p>Evaluate candidate precision, batch size, concurrency and GPU allocation against latency, throughput and thermal guardrails.</p>
-            </div>
-            <button className="optimization-run-button" onClick={runOptimization} disabled={busy}><Zap size={17}/>{busy ? 'Evaluating candidates…' : 'Run Optimization'}</button>
+            <div><span className="eyebrow">WHAT-IF OPTIMIZATION LAB</span><h2>Test a configuration before changing the fleet</h2><p>Change workload demand and serving parameters, then evaluate predicted P95 latency, throughput, power and temperature against the configured SLA. This is a simulation estimate; it does not apply changes.</p></div>
+            <button className="optimization-run-button" onClick={evaluateScenario} disabled={busy}><Gauge size={17}/>{busy ? 'Evaluating scenario…' : 'Evaluate Scenario'}</button>
           </div>
-          <div className="optimization-workspace-stats">
-            <div><span>Candidates evaluated</span><strong>{optimizationRun?.candidates_checked ?? data?.optimization?.candidates_checked ?? '—'}</strong></div>
-            <div><span>SLA-feasible candidates</span><strong>{optimizationRun?.feasible_candidates ?? data?.optimization?.feasible_candidates ?? '—'}</strong></div>
-            <div><span>Simulation</span><strong>{data?.simulation?.running ? 'Running' : 'Idle'}</strong></div>
-            <div><span>Last run</span><strong>{optimizationRunAt ? new Date(optimizationRunAt).toLocaleTimeString() : 'Not run this session'}</strong></div>
-          </div>
-          <div className="optimization-workspace-grid">
-            <article className="optimization-workspace-card recommended">
-              <div className="optimization-workspace-card-head"><div><span className="eyebrow">ENGINE OUTPUT</span><h3>Recommended configuration</h3></div><span className="recommended-pill">Recommended</span></div>
-              {(optimizationRun?.recommended_configuration || data?.optimization?.recommended_configuration) ? <div className="optimization-config-list">
-                {Object.entries(optimizationRun?.recommended_configuration || data?.optimization?.recommended_configuration || {}).map(([key,value]) => <div key={key}><span>{key.replaceAll('_',' ').replace(/\b\w/g, ch => ch.toUpperCase())}</span><strong>{String(value)}</strong></div>)}
-              </div> : <p className="optimization-empty">Run optimization to generate a candidate recommendation.</p>}
+          <div className="whatif-layout">
+            <article className="whatif-controls">
+              <div className="optimization-workspace-card-head"><div><span className="eyebrow">SCENARIO INPUTS</span><h3>Configuration & workload</h3></div><button className="whatif-reset" onClick={()=>{setScenarioDraft(data?.configuration || null);setScenarioRate('');setScenarioEstimate(null)}}>Reset</button></div>
+              <div className="whatif-fields">
+                <label>Precision<select value={currentScenario.precision} onChange={e=>setScenarioDraft({...currentScenario,precision:e.target.value})}><option>FP32</option><option>FP16</option><option>INT8</option></select></label>
+                <label>Batch size<select value={currentScenario.batch_size} onChange={e=>setScenarioDraft({...currentScenario,batch_size:Number(e.target.value)})}>{[8,16,32,64].map(v=><option key={v} value={v}>{v}</option>)}</select></label>
+                <label>GPU allocation<select value={currentScenario.gpu_allocation} onChange={e=>setScenarioDraft({...currentScenario,gpu_allocation:Number(e.target.value)})}>{[1,2,3,4,5].map(v=><option key={v} value={v}>{v} GPU(s) per replica</option>)}</select></label>
+                <label>Replicas<select value={currentScenario.replicas} onChange={e=>setScenarioDraft({...currentScenario,replicas:Number(e.target.value)})}>{[1,2,3].map(v=><option key={v} value={v}>{v}</option>)}</select></label>
+                <label>Concurrency<select value={currentScenario.concurrency} onChange={e=>setScenarioDraft({...currentScenario,concurrency:Number(e.target.value)})}>{[16,24,32,64].map(v=><option key={v} value={v}>{v}</option>)}</select></label>
+                <label>Offered request rate (req/min)<input type="number" min="300" max="2200" step="50" placeholder={String(data?.telemetry?.request_rate ?? 900)} value={scenarioRate} onChange={e=>setScenarioRate(e.target.value)}/></label>
+              </div>
+              <p className="whatif-footnote">Current fleet: {data?.cluster?.gpu_count ?? 5} simulated GPUs. Requests outside backend-supported ranges will be rejected with an error.</p>
             </article>
-            <article className="optimization-workspace-card">
-              <div className="optimization-workspace-card-head"><div><span className="eyebrow">DECISION BASIS</span><h3>Why this candidate?</h3></div></div>
-              <p className="optimization-reason">{optimizationRun?.reason || data?.optimization?.reason || 'Run the optimizer to see its latest decision rationale.'}</p>
-              <div className="optimization-result-footer">{(optimizationRun?.feasible_candidates ?? data?.optimization?.feasible_candidates ?? 0) > 0 ? 'At least one candidate satisfies the configured guardrails.' : 'No SLA-feasible candidate is currently reported.'}</div>
+            <article className="whatif-results">
+              <div className="optimization-workspace-card-head"><div><span className="eyebrow">PREDICTED OUTCOME</span><h3>Scenario assessment</h3></div>{scenarioEstimate && <span className={`whatif-sla-pill ${scenarioEstimate.feasible ? 'pass' : 'fail'}`}>{scenarioEstimate.feasible ? 'SLA FEASIBLE' : 'SLA NOT FEASIBLE'}</span>}</div>
+              {scenarioEstimate ? <>
+                <div className="whatif-metric-grid">
+                  <div><span>P95 latency</span><strong>{fmt(scenarioEstimate.latency_p95_ms,1)} ms</strong><small>Limit {fmt(data?.sla?.configuration?.max_latency_ms,0)} ms</small></div>
+                  <div><span>Throughput</span><strong>{fmt(scenarioEstimate.throughput,1)} req/min</strong><small>Minimum {fmt(data?.sla?.configuration?.min_throughput_req_min,0)} req/min</small></div>
+                  <div><span>Total GPU power</span><strong>{fmt(scenarioEstimate.total_power,1)} W</strong><small>{data?.telemetry?.total_power != null ? `${Number(scenarioEstimate.total_power)-Number(data.telemetry.total_power)>0?'+':''}${fmt(Number(scenarioEstimate.total_power)-Number(data.telemetry.total_power),1)} W vs current` : 'Current comparison unavailable'}</small></div>
+                  <div><span>Temperature</span><strong>{fmt(scenarioEstimate.temperature,1)} °C</strong><small>Limit {fmt(data?.sla?.configuration?.max_temperature_c,0)} °C</small></div>
+                </div>
+                <div className="whatif-guardrails">{[['P95 latency',scenarioEstimate.sla?.latency_ok],['Minimum throughput',scenarioEstimate.sla?.throughput_ok],['Temperature',scenarioEstimate.sla?.temperature_ok]].map(([label,ok])=><div key={label}><span>{label}</span><strong className={ok?'guardrail-pass':'guardrail-fail'}>{ok?'PASS':'FAIL'}</strong></div>)}</div>
+                <p className="whatif-footnote">Estimate for {fmt(scenarioEstimate.request_rate,0)} req/min. Predicted values are simulator outputs, not physical GPU measurements.</p>
+              </> : <div className="whatif-empty"><Gauge size={28}/><strong>No scenario evaluated yet</strong><span>Adjust the inputs and run an evaluation to see predicted performance and SLA guardrails.</span></div>}
             </article>
           </div>
-          <p className="optimization-workspace-note">This action evaluates candidates; it does not apply the recommendation. Use the autonomous controller workflow to apply and verify changes.</p>
+          <div className="optimization-engine-row">
+            <div><span className="eyebrow">FULL SEARCH</span><strong>Need the optimizer to search all candidates?</strong><p>Run the multi-candidate optimizer to find its best feasible configuration for the current workload.</p></div>
+            <button className="optimization-secondary-button" onClick={runOptimization} disabled={busy}><Zap size={15}/>{busy ? 'Working…' : 'Run full optimization'}</button>
+          </div>
+          {optimizationRun && <div className="whatif-search-result"><div><span className="eyebrow">LATEST SEARCH RESULT</span><strong>{optimizationRun.feasible_candidates} feasible / {optimizationRun.candidates_checked} candidates</strong><p>{optimizationRun.reason}</p></div><div><span>Recommended</span><strong>{optimizationRun.recommended_configuration?.precision} · batch {optimizationRun.recommended_configuration?.batch_size} · {optimizationRun.recommended_configuration?.gpu_allocation} GPU(s) × {optimizationRun.recommended_configuration?.replicas} replicas</strong></div></div>}
         </section>}
 
         {error && <div className="error-banner"><AlertTriangle size={17}/><span>Backend connection: {error}</span><button onClick={refresh}>Retry</button></div>}
