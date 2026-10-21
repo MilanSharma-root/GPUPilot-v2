@@ -81,6 +81,7 @@ function App() {
 
   const [data, setData] = useState(null)
   const [environmentMonitor, setEnvironmentMonitor] = useState(null)
+  const [crossWorkloadPlan, setCrossWorkloadPlan] = useState(null)
   const [environmentScanning, setEnvironmentScanning] = useState(false)
 
   const [error, setError] = useState('')
@@ -112,6 +113,7 @@ function App() {
 
       const next = await api('/dashboard')
       setData(next)
+      try { setCrossWorkloadPlan(await api('/cross-workload/plan')) } catch { /* cross-workload panel reports unavailable state */ }
       // Keep the TinyFish monitor independent so a missing API key never breaks the main dashboard.
       try { setEnvironmentMonitor(await api('/environment/monitor')) } catch { /* optional panel */ }
       setError('')
@@ -344,15 +346,16 @@ function App() {
   const nav = [
     ['dashboard', 'Dashboard', LayoutDashboard],
     ['fleet', 'GPU Fleet', Server],
+    ['crossworkload', 'Cross-Workload AI', Cpu],
     ['workspace', 'Workspace', Settings],
   ]
 
   const go = (key) => {
     setActiveNav(key)
-    if (key === 'fleet') {
+    if (key === 'fleet' || key === 'crossworkload') {
       setActivePage('dashboard')
       window.location.hash = 'dashboard'
-      requestAnimationFrame(() => document.getElementById('gpu-fleet')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+      requestAnimationFrame(() => document.getElementById(key === 'fleet' ? 'gpu-fleet' : 'cross-workload')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } else {
       setActivePage(key)
       window.location.hash = key === 'workspace' ? 'workspace' : 'dashboard'
@@ -693,6 +696,45 @@ function App() {
           </div>}
         </section>
 
+
+        <section className="panel cross-workload-panel" id="cross-workload">
+          <div className="panel-header">
+            <div><h2><Cpu size={19}/> Cross-Workload Intelligence</h2><p>Shared simulated GPU pool coordinating multiple AI workload types</p></div>
+            <span className="simulated-tag">SIMULATED PLAN</span>
+          </div>
+          {crossWorkloadPlan ? <>
+            <div className="cross-kpis">
+              <div><span>Workloads</span><strong>{crossWorkloadPlan.workload_count}</strong></div>
+              <div><span>GPUs allocated</span><strong>{crossWorkloadPlan.allocated_gpu_count}<small> / {crossWorkloadPlan.gpu_count}</small></strong></div>
+              <div><span>Queued</span><strong>{crossWorkloadPlan.queued_workload_count}</strong></div>
+              <div><span>SLO at risk</span><strong className={crossWorkloadPlan.sla_at_risk_count ? 'cross-risk' : ''}>{crossWorkloadPlan.sla_at_risk_count}</strong></div>
+            </div>
+            <div className="cross-pool">
+              <div className="cross-subheading"><strong>GPU-to-workload mapping</strong><span>{crossWorkloadPlan.idle_gpu_count} idle</span></div>
+              <div className="cross-gpu-grid">
+                {(crossWorkloadPlan.gpus || []).map(g => <div className={`cross-gpu ${g.status === 'ALLOCATED' ? 'allocated' : 'idle'}`} key={g.id}>
+                  <div className="cross-gpu-top"><Cpu size={17}/><b>{g.id}</b><span>{g.status}</span></div>
+                  <strong>{g.model}</strong>
+                  <small>{g.assigned_workload_name || 'Available capacity'}</small>
+                  <div className="cross-memory">{g.memory_gb} GB memory · {g.capacity_factor}× capacity</div>
+                </div>)}
+              </div>
+            </div>
+            <div className="cross-subheading cross-table-heading"><strong>Workload arbitration decisions</strong><span>Priority + demand + latency SLO + memory fit</span></div>
+            <div className="cross-workload-list">
+              {(crossWorkloadPlan.workloads || []).map(w => <article className="cross-workload-row" key={w.id}>
+                <div className="cross-workload-identity"><span className={`workload-kind kind-${w.kind}`}>{w.kind}</span><div><strong>{w.name}</strong><small>{w.model} · Priority {w.priority}/5</small></div></div>
+                <div className="cross-workload-metric"><span>Demand</span><b>{fmt(w.demand_rpm)} <small>req/min</small></b></div>
+                <div className="cross-workload-metric"><span>Est. latency</span><b>{fmt(w.estimated_latency_ms)} <small>ms</small></b></div>
+                <div className="cross-workload-metric"><span>Assigned GPUs</span><b>{w.assigned_gpus.length ? w.assigned_gpus.join(', ') : 'None'}</b></div>
+                <div className="cross-workload-status"><span className={w.sla_status === 'PASS' ? 'cross-pass' : 'cross-risk'}>{w.status}</span><small>{w.sla_status === 'PASS' ? 'SLO estimate passes' : 'SLO estimate needs attention'}</small></div>
+                <p>{w.decision_reason}</p>
+              </article>)}
+            </div>
+            <div className="cross-footer"><span>Estimated served: <b>{fmt(crossWorkloadPlan.estimated_served_rpm)} req/min</b></span><span>Estimated cluster power: <b>{fmt(crossWorkloadPlan.estimated_cluster_power_w)} W</b></span></div>
+            <p className="cross-disclaimer">{crossWorkloadPlan.disclaimer}</p>
+          </> : <div className="empty">Cross-workload plan is unavailable. Check that the backend feature branch is running.</div>}
+        </section>
 
         <section className="sustainability panel">
 
