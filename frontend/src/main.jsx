@@ -715,8 +715,8 @@ function App() {
                 {(crossWorkloadPlan.gpus || []).map(g => <div className={`cross-gpu ${g.status === 'ALLOCATED' ? 'allocated' : 'idle'}`} key={g.id}>
                   <div className="cross-gpu-top"><Cpu size={17}/><b>{g.id}</b><span>{g.status}</span></div>
                   <strong>{g.model}</strong>
-                  <small>{g.assigned_workload_name || 'Available capacity'}</small>
-                  <div className="cross-memory">{g.memory_gb} GB memory · {g.capacity_factor}× capacity</div>
+                  <small>{g.allocations?.length ? g.allocations.map(a => `${a.workload_name} (${a.share_pct}%)`).join(' · ') : 'Available capacity'}</small>
+                  <div className="cross-memory">{g.allocated_share_pct ?? 0}% compute allocated · {g.remaining_memory_gb ?? g.memory_gb} GB memory free</div>
                 </div>)}
               </div>
             </div>
@@ -726,7 +726,7 @@ function App() {
                 <div className="cross-workload-identity"><span className={`workload-kind kind-${w.kind}`}>{w.kind}</span><div><strong>{w.name}</strong><small>{w.model} · Priority {w.priority}/5</small></div></div>
                 <div className="cross-workload-metric"><span>Demand</span><b>{fmt(w.demand_rpm)} <small>req/min</small></b></div>
                 <div className="cross-workload-metric"><span>Est. latency</span><b>{fmt(w.estimated_latency_ms)} <small>ms</small></b></div>
-                <div className="cross-workload-metric"><span>Assigned GPUs</span><b>{w.assigned_gpus.length ? w.assigned_gpus.join(', ') : 'None'}</b></div>
+                <div className="cross-workload-metric"><span>Assigned GPUs</span><b>{w.gpu_shares?.length ? w.gpu_shares.map(a => `${a.gpu_id} (${a.share_pct}%)`).join(', ') : 'None'}</b></div>
                 <div className="cross-workload-status"><span className={w.sla_status === 'PASS' ? 'cross-pass' : 'cross-risk'}>{w.status}</span><small>{w.sla_status === 'PASS' ? 'SLO estimate passes' : 'SLO estimate needs attention'}</small></div>
                 <p>{w.decision_reason}</p>
               </article>)}
