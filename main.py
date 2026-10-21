@@ -494,6 +494,39 @@ async def workloads():
     }]}
 
 
+
+# ------------------------------------------------ cross-workload intelligence
+@app.get("/api/cross-workload/plan")
+async def cross_workload_plan():
+    """Return an explainable multi-workload allocation plan using simulated data."""
+    from engine.cross_workload import DEFAULT_WORKLOADS, plan_cross_workload
+    workloads = [dict(item) for item in DEFAULT_WORKLOADS]
+    # Couple the LLM arrival rate to the existing simulation so spikes affect
+    # arbitration; keep the other workload streams active in parallel.
+    workloads[0]["demand_rpm"] = max(250, min(1800, float(sim.latest.request_rate) * 0.72))
+    workloads[1]["demand_rpm"] = max(250, min(1800, 500 + float(sim.latest.request_rate) * 0.22))
+    workloads[2]["demand_rpm"] = max(60, min(500, 90 + float(sim.latest.request_rate) * 0.06))
+    workloads[3]["demand_rpm"] = max(200, min(1500, 350 + float(sim.latest.request_rate) * 0.18))
+    try:
+        plan = plan_cross_workload(workloads)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    plan["source_workload_state"] = sim.state.value
+    plan["source_sample_id"] = sim.latest.sample_id
+    return plan
+
+
+@app.post("/api/cross-workload/plan")
+async def custom_cross_workload_plan(body: list[dict]):
+    """Evaluate a custom set of simulated workload demands; no physical action occurs."""
+    from engine.cross_workload import plan_cross_workload
+    try:
+        return plan_cross_workload(body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+
 def _anomaly_report(samples=None):
     """Detect anomalies from telemetry deviations, not from UI flags.
 
