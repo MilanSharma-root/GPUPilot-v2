@@ -53,3 +53,33 @@ def test_cross_workload_plan_is_explicitly_simulated():
     result = plan_cross_workload(DEFAULT_WORKLOADS)
     assert result["data_source"] == "SIMULATED CROSS-WORKLOAD PLAN"
     assert "not physical measurements" in result["disclaimer"]
+
+
+
+def test_gpu_can_be_shared_by_multiple_compatible_workloads():
+    gpus = [{"id": "GPU-A", "model": "Test GPU", "memory_gb": 80, "capacity_factor": 1.0, "power_w": 300}]
+    workloads = [
+        {"id": "priority-llm", "kind": "llm", "demand_rpm": 100, "priority": 5, "memory_gb": 20},
+        {"id": "background-batch", "kind": "batch", "demand_rpm": 100, "priority": 1, "memory_gb": 10},
+    ]
+    result = plan_cross_workload(workloads, gpus)
+    allocations = result["gpus"][0]["allocations"]
+    assert len(allocations) == 2
+    assert sum(a["share_pct"] for a in allocations) <= 100
+    assert result["allocated_gpu_count"] == 1
+
+
+def test_fractional_shares_never_exceed_gpu_capacity():
+    result = plan_cross_workload()
+    for gpu in result["gpus"]:
+        assert gpu["allocated_share_pct"] <= 100
+        assert gpu["remaining_memory_gb"] >= 0
+        assert abs(gpu["allocated_share_pct"] + (100 - gpu["allocated_share_pct"]) - 100) < 1e-6
+
+
+def test_each_gpu_allocation_references_a_known_workload():
+    result = plan_cross_workload()
+    workload_ids = {w["id"] for w in result["workloads"]}
+    for gpu in result["gpus"]:
+        for allocation in gpu["allocations"]:
+            assert allocation["workload_id"] in workload_ids
